@@ -192,7 +192,7 @@ if __name__ == '__main__':
     init_gain=16
     gain_step=0.1
     max_gain=17
-    test_duration=2 # in seconds
+    test_duration=20 # in seconds
     q_mes_values = []
     #sustained oscilation Gain = ultiamate gain
     #the period of the frequency at this gain (1/dominant frequency) will be the ultimate period
@@ -200,12 +200,12 @@ if __name__ == '__main__':
     # Inside your loop where you analyze the frequency for each gain
     for i in range(int((max_gain - init_gain) / gain_step) + 1):
         # Simulate with the current gain value
-        data = simulate_with_given_pid_values(sim_ = sim, kp = init_gain + (i * gain_step), joints_id = joint_id, regulation_displacement=regulation_displacement, episode_duration=test_duration, plot=False)
+        data = simulate_with_given_pid_values(sim_ = sim, kp = init_gain + (i * gain_step), joints_id = joint_id, regulation_displacement=regulation_displacement, episode_duration=test_duration, plot=True)
         # Take out the DC offset of the freuency domain and perform frequency analysis on the data
         data = data - np.mean(data) #takes out the 0 for dominant frequency
         q_mes_values.append(data)
     
-    get_plots(q_mes_values, int((max_gain - init_gain) / gain_step), joint_id, init_gain)
+    #get_plots(q_mes_values, int((max_gain - init_gain) / gain_step), joint_id, init_gain)
     
     joint_data = np.array(data)[:, joint_id]  # Select joint-specific data
     xf, power = perform_frequency_analysis(joint_data, sim.GetTimeStep())
