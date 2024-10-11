@@ -108,6 +108,49 @@ def simulate_with_given_pid_values(sim_, kp, joints_id, regulation_displacement=
         plt.show()
     
     return q_mes_all
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+def plot_measured_joint_positions(data, kp_values, kd_values):
+    """
+    Plot the measured joint positions for all joints over time.
+
+    Args:
+        data: A numpy array of shape (time steps, joints) containing measured positions.
+        kp_values: List or array of Kp values used in the simulation (one per joint).
+        kd_values: List or array of Kd values used in the simulation (one per joint).
+    """
+    joint_count = data.shape[1]  # Number of joints
+    time_steps = data.shape[0]  # Number of time steps
+    
+    # Create subplots: 7 graphs (2 rows x 4 columns) to accommodate 7 joints
+    fig, axes = plt.subplots(2, 4, figsize=(18, 8))  # More space horizontally
+    
+    # Flatten axes for easier access
+    axes = axes.flatten()
+
+    # Time array based on the number of time steps
+    time = np.arange(0, time_steps * 0.001, 0.001)  # Time in seconds (assuming 0.001s time step)
+
+    for i in range(joint_count):
+        axes[i].plot(time, data[:, i], label=f"Joint {i+1} Measured Position")
+        axes[i].grid(True)
+        axes[i].set_xlabel('Time (s)')
+        axes[i].set_ylabel('Joint Position')
+        axes[i].set_title(f"Joint {i+1} (Kp={kp_values[i-1]}, Kd={kd_values[i-1]})")
+        axes[i].legend()
+
+    # Remove the last empty plot if there are only 7 joints
+    fig.delaxes(axes[-1])  # Remove the 8th subplot which is empty
+
+    # Adjust layout
+    plt.tight_layout()
+    plt.show()
+
+    # FIX THIS ON SUNDAY #
+
+
      
 
 # Function to calculate the dominant frequency
@@ -203,24 +246,38 @@ def simulate_over_steps(init_gain, max_gain, step_gain, joint_id, reg_disp, tes_
 
 def simulate_over_joints(kp, joint_id, reg_disp, tes_dur, plot, kd):
     """
-    quickly passing through multiple values of Kp to find general value for Ku
+    Simulates the system with PID control for multiple joints using given kp and kd values.
 
     Args:
-        kp: array of kp to test
+        kp: array of kp values to test (one for each joint)
         joint_id: number of joints
         reg_disp: regulation displacement
         tes_dur: the duration of the test
         plot: bool -> true if you want the data plotted
-        kd: value for kd (default 0)
+        kd: array of kd values (one for each joint)
 
     Return:
-        NULL
+        data: array of collected position data for all joints (time steps x joints)
     """
+    # Initialize an empty list to store data for each joint
+    all_data = []
 
+    # Loop through each joint
     for i in range(joint_id):
-        simulate_with_given_pid_values(sim_ = sim, kp = kp[i], joints_id = i, regulation_displacement=reg_disp, episode_duration=tes_dur, plot=plot, kd = kd[i])
+        # Simulate for the given joint with the corresponding kp and kd
+        joint_data = simulate_with_given_pid_values(sim_=sim, kp=kp[i], joints_id=i, 
+                                                    regulation_displacement=reg_disp, 
+                                                    episode_duration=tes_dur, 
+                                                    plot=plot, kd=kd[i])
+        
+        # Append the joint data to the list
+        all_data.append(joint_data)
 
-    return
+    # Convert the list of joint data into a numpy array (time steps x joints)
+    all_data = np.array(all_data).T  # Transpose to get (time steps x joints)
+    
+    return all_data
+
 
 def find_ku_and_tu(joint_id, regulation_displacement, test_duration, initial_kp, kp_step, max_kp, plot=False):
     last_dominant_frequency = 0
@@ -265,8 +322,8 @@ def find_ku_and_tu(joint_id, regulation_displacement, test_duration, initial_kp,
 
 if __name__ == '__main__':
     # initialise parameters
-    joint_id = 1 # Joint ID to tune
-    regulation_displacement = 0.1  # Displacement from the initial joint position
+    joint_id = 0 # Joint ID to tune
+    regulation_displacement = 1  # Displacement from the initial joint position
     init_gain=1
     gain_step=1
     max_gain=30
@@ -283,9 +340,10 @@ if __name__ == '__main__':
 
     #find_ku_and_tu(joint_id, regulation_displacement, test_duration, initial_kp=init_gain, kp_step=gain_step, max_kp=max_gain, plot=True)
 
-    data = simulate_with_given_pid_values(sim_ = sim, kp = kp[joint_id], joints_id = joint_id, regulation_displacement=regulation_displacement, episode_duration=test_duration, plot=True)
+    #data = simulate_with_given_pid_values(sim_ = sim, kp = kp[joint_id], joints_id = joint_id, regulation_displacement=regulation_displacement, episode_duration=test_duration, plot=True)
     #simulate_over_steps(init_gain, max_gain, gain_step, joint_id, regulation_displacement, test_duration, True)
-    #simulate_over_joints(kp, 7, regulation_displacement, test_duration, True, kd)
+    data = simulate_over_joints(kp_final, 7, regulation_displacement, test_duration, False, kd)
+    plot_measured_joint_positions(data, kp, kd)
 
     #selecting the joint data that we need
     joint_data = np.array(data)[:, joint_id] 
