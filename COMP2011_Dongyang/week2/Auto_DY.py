@@ -8,7 +8,7 @@ from simulation_and_control import pb, MotorCommands, PinWrapper, feedback_lin_c
 # Configuration for the simulation
 conf_file_name = "pandaconfig.json"  # Configuration file for the robot
 cur_dir = os.path.dirname(os.path.abspath(__file__))
-sim = pb.SimInterface(conf_file_name, conf_file_path_ext=cur_dir)  # Initialize simulation interface
+sim = pb.SimInterface(conf_file_name, conf_file_path_ext=cur_dir, use_gui=True)  # Initialize simulation interface
 
 # Get active joint names from the simulation
 ext_names = sim.getNameActiveJoints()
@@ -78,7 +78,8 @@ def simulate_with_given_pid_values(sim_, kp, kd, joints_id, regulation_displacem
         time_all.append(i * time_step)
 
         current_time += time_step
-        print("Current time in seconds", current_time)
+        if(steps%1000 == 0):
+            print("Current time in seconds", current_time, "\tfor: ", kp)
 
     # Make the plot for the current joint if required
     if plot:
@@ -92,11 +93,11 @@ def simulate_with_given_pid_values(sim_, kp, kd, joints_id, regulation_displacem
         plt.grid(True)
         plt.show()
 
-    return q_mes_all, qd_mes_all, q_d_all, qd_d_all, time_all, regressor_all
+    return q_mes_all
 
-def perform_frequency_analysis(data, dt):
+def perform_frequency_analysis(data, dt, plot=False):
     data = np.array(data)  # Convert to a numpy array
-    data -= 0.1  # Subtract 0.1 from each element
+    data = data - np.mean(data)
     n = len(data)
     yf = fft(data)
     xf = fftfreq(n, dt)[:n//2]
@@ -107,67 +108,116 @@ def perform_frequency_analysis(data, dt):
     dominant_frequency = xf[idx_max]
 
     # Optional: Plot the spectrum
-    plt.figure()
-    plt.plot(xf, power)
-    plt.title("FFT of the signal")
-    plt.xlabel("Frequency (Hz)")
-    plt.ylabel("Amplitude")
-    plt.grid(True)
-    plt.show()
+    if plot:
+        plt.figure()
+        plt.plot(xf, power)
+        plt.xlim(0,2)
+        plt.title("FFT of the signal")
+        plt.xlabel("Frequency (Hz)")
+        plt.ylabel("Amplitude")
+        plt.grid(True)
+        plt.show()
+
+    print(f"frequency = {dominant_frequency}")
 
     return xf, power, dominant_frequency
 
-def find_ku_and_tu(sim, joint_id, regulation_displacement, test_duration, initial_kp=15, kp_step=1, max_kp=18, plot=False):
-    last_dominant_frequency = 0
+def find_ku_and_tu(sim, joint_id, regulation_displacement, test_duration, initial_kp=15, kp_step=1, max_kp=18, plot=False, stability_threshold=3):
     last_power_peak = 0
-    kp_test = initial_kp
+    closest_ku = None
+    closest_tu = None
+    min_power_diff = float('inf')  # To track the closest power difference
+    stable_count = 0  # Counter for consecutive stable oscillations
+
     kd_test = 0  # Assuming kd is zero for this process
-    found = False
-    while kp_test <= max_kp and not found:
-        q_mes_all, _, _, _, time_all, _ = simulate_with_given_pid_values(sim, kp_test, kd_test, joint_id, regulation_displacement, test_duration, plot)
-        xf, power, dominant_frequency = perform_frequency_analysis(q_mes_all, sim.GetTimeStep())
+
+    # Iterate over the Kp values in a for loop
+    for kp_test in range(int((max_kp - initial_kp) / kp_step) + 1):
+        q_mes_all = simulate_with_given_pid_values(sim, initial_kp + (kp_test * kp_step), kd_test, joint_id, regulation_displacement, test_duration, plot)
+        xf, power, dominant_frequency = perform_frequency_analysis(q_mes_all, sim.GetTimeStep(), plot)
         current_power_peak = np.max(power)
-        
+
         if plot:
             plt.figure()
             plt.plot(xf, power)
-            plt.title(f"FFT with Kp={kp_test}")
+            plt.title(f"FFT with Kp={initial_kp + (kp_test * kp_step)}")
             plt.xlabel("Frequency (Hz)")
             plt.ylabel("Amplitude")
             plt.grid(True)
             plt.show()
 
-        # Check if the dominant frequency stabilizes
-        if last_dominant_frequency != 0 and (abs(dominant_frequency - last_dominant_frequency) < 0.3 or current_power_peak < last_power_peak):   # Threshold can be adjusted
-            Ku = kp_test
-            Tu = 1 / dominant_frequency
-            found = True
-            return Ku, Tu, dominant_frequency
+        # Check if the oscillation is stable based on power differences
+        if last_power_peak != 0:
+            power_diff = abs(current_power_peak - last_power_peak)
+            
+            # Check if the current power peak is stable
+            if power_diff < 0.05:  # Assuming a threshold for power stability
+                stable_count += 1  # Increment stable count
+                
+                # If we found a closer Ku, update closest_ku and closest_tu
+                if power_diff < min_power_diff:
+                    closest_ku = initial_kp + (kp_test * kp_step)
+                    closest_tu = 1 / dominant_frequency
+                    min_power_diff = power_diff
+            else:
+                stable_count = 0  # Reset stable count if not stable
+        else:
+            stable_count = 0  # Reset on first iteration
 
-        last_dominant_frequency = dominant_frequency
+        # Update for the next iteration
         last_power_peak = current_power_peak
-        kp_test += kp_step
 
-    if not found:
-        raise ValueError("Ku not found within the tested range of Kp")
+    # If we found a closest Ku and it has been stable for enough iterations, return it
+    if closest_ku is not None and stable_count >= stability_threshold:
+        return closest_ku, closest_tu, dominant_frequency
+
+    # If no suitable Ku was found, raise an error
+    raise ValueError("Ku not found within the tested range of Kp or oscillations were not stable.")
+
+
+
+def calculate_values(Ku, Tu, P=0, PI=0, PD=0, PID=0) -> float:
+    """
+    Args:
+
+
+    Return:
+        
+    """
+    table = np.array([[0.5, 0, 0],
+             [0.45, 5/6, 0],
+             [0.8, 0, 0.125],
+             [0.6, 0.5, 0.125]])
+    
+    mul = np.array([P, PI, PD, PID])
+
+    values = np.matmul(mul, table)
+
+    Kp = Ku*values[0]
+    Ki = (Ku*values[0])/(Tu*values[1])
+    Kd = (Ku*values[0])*(Tu*values[2])
+
+    return Kp, Ki, Kd
 
 def main():
-    joint_id = 0 # The joint to be tuned
-    regulation_displacement = 0.1
-    test_duration = 10
+    joint_id = 1 # The joint to be tuned
+    regulation_displacement = 1
+    test_duration = 20
     plot_results = True
+    initial_kp = 10
+    kp_step = 0.1
+    max_kp = 10
 
     # Find Ku and Tu
     try:
-        Ku, Tu, dominant_frequency = find_ku_and_tu(sim, joint_id, regulation_displacement, test_duration, initial_kp=15, kp_step=1, max_kp=30, plot=plot_results)
+        Ku, Tu, dominant_frequency = find_ku_and_tu(sim, joint_id, regulation_displacement, test_duration, initial_kp, kp_step, max_kp, plot=plot_results, stability_threshold=3)
         print(f"Found Ku: {Ku}, Tu: {Tu}, with dominant frequency: {dominant_frequency} Hz")
 
         # Calculate Kp and Kd based on Ziegler-Nichols formula for a PID controller
-        Kp = 0.6 * Ku
-        Kd = 0.075 * Ku * Tu
+        Kp, Ki, Kd = calculate_values(Ku, Tu, PD=True)
 
         # Re-run the simulation with the calculated Kp and Kd
-        q_mes_all, _, _, _, time_all, _ = simulate_with_given_pid_values(sim, Kp, Kd, joint_id, regulation_displacement, test_duration, plot=plot_results)
+        q_mes_all = simulate_with_given_pid_values(sim, Kp, Kd, joint_id, regulation_displacement, test_duration, plot=True)
         perform_frequency_analysis(q_mes_all, sim.GetTimeStep())
         print(f"Calculated Kp: {Kp}, Kd: {Kd}")
     except ValueError as e:
