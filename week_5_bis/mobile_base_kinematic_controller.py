@@ -22,7 +22,7 @@ def quaternion2bearing(q_w, q_x, q_y, q_z):
     return bearing_
 
 
-estimation_switch   = True
+estimation_switch   = False
 
 def main():
     # Configuration for the simulation
@@ -239,6 +239,17 @@ def main():
 
     # Plotting 
     #add visualization of final x, y, trajectory and theta
+    base_pos_all = np.array(base_pos_all)
+    base_ori_all = np.array(base_ori_all)
+    plt.figure()
+    plt.plot(base_pos_all[:, 0], base_pos_all[:, 1], 'r', label='Robot trajectory')
+    plt.xlabel('x [m]')
+    plt.ylabel('y [m]')
+    plt.title('Robot trajectory')
+    plt.legend()
+    plt.grid()
+    plt.show()
+
     
     
    
