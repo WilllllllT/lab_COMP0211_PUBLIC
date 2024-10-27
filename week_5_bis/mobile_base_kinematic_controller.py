@@ -233,6 +233,7 @@ def main():
         base_pos_all.append(base_pos)
         base_ori_all.append(base_ori)
 
+
         # Update current time
         current_time += time_step
 

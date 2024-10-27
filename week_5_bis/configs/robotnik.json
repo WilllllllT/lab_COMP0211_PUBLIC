@@ -30,7 +30,7 @@
         "motor_elastic_coeff": [0],
         "motor_inertia": [0],
         "motor_inertia_coeff": [0],
-        "foot_friction": [2],
+        "foot_friction": [1],
         "foot_restitution": [0],
         "enable_feet_joint_force_sensors": [["RL_foot_fixed", "RR_foot_fixed", "FL_foot_fixed", "FR_foot_fixed"]],
         "floating_base_name": ["robot_base_footprint"],
