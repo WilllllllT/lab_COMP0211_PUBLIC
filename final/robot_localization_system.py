@@ -3,7 +3,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-
+#initial conditions for the filter
 class FilterConfiguration(object):
     def __init__(self):
         # Process and measurement noise covariance matrices
@@ -16,10 +16,85 @@ class FilterConfiguration(object):
         self.x0 = np.array([2.0, 3.0, np.pi / 4])
         self.Sigma0 = np.diag([1.0, 1.0, 0.5]) ** 2
 
-
+#setting the land marks for the map
 class Map(object):
     def __init__(self):
         self.landmarks = np.array([
+            # [5, 5],
+            # [5, 10],
+            # [5, 15],
+            # [10, 5],
+            # [10, 10],
+            # [10, 15],
+            # [15, 5],
+            # [15, 10],
+            # [15, 15],
+
+            # [-20, -20],
+            # [-20, -10],
+            # [-20, 0],
+            # [-20, 10],
+            # [-20, 20],
+            # [-10, -20],
+            # [-10, -10],
+            # [-10, 0],
+            # [-10, 10],
+            # [-10, 20],
+            # [0, -20],
+            # [0, -10],
+            # [0, 0],
+            # [0, 10],
+            # [0, 20],
+            # [10, -20],
+            # [10, -10],
+            # [10, 0],
+            # [10, 10],
+            # [10, 20],
+            # [20, -20],
+            # [20, -10],
+            # [20, 0],
+            # [20, 10],
+            # [20, 20]
+
+            # close to achieving stability
+
+            # [-20, -20], [-20, -15], [-20, -10], [-20, -5], [-20, 0], [-20, 5], [-20, 10], [-20, 15], [-20, 20],
+            # [-15, -20], [-15, -15], [-15, -10], [-15, -5], [-15, 0], [-15, 5], [-15, 10], [-15, 15], [-15, 20],
+            # [-10, -20], [-10, -15], [-10, -10], [-10, -5], [-10, 0], [-10, 5], [-10, 10], [-10, 15], [-10, 20],
+            # [-5, -20], [-5, -15], [-5, -10], [-5, -5], [-5, 0], [-5, 5], [-5, 10], [-5, 15], [-5, 20],
+            # [0, -20], [0, -15], [0, -10], [0, -5], [0, 0], [0, 5], [0, 10], [0, 15], [0, 20],
+            # [5, -20], [5, -15], [5, -10], [5, -5], [5, 0], [5, 5], [5, 10], [5, 15], [5, 20],
+            # [10, -20], [10, -15], [10, -10], [10, -5], [10, 0], [10, 5], [10, 10], [10, 15], [10, 20],
+            # [15, -20], [15, -15], [15, -10], [15, -5], [15, 0], [15, 5], [15, 10], [15, 15], [15, 20],
+            # [20, -20], [20, -15], [20, -10], [20, -5], [20, 0], [20, 5], [20, 10], [20, 15], [20, 20]
+            
+            
+            # [-10, -10], [-10, -5], [-10, 0], [-10, 5], [-10, 10], [-10, 15], [-10, 20], [-10, 25], [-10, 30],
+            # [-5, -10], [-5, -5], [-5, 0], [-5, 5], [-5, 10], [-5, 15], [-5, 20], [-5, 25], [-5, 30],
+            # [0, -10], [0, -5], [0, 0], [0, 5], [0, 10], [0, 15], [0, 20], [0, 25], [0, 30],
+            # [5, -10], [5, -5], [5, 0], [5, 5], [5, 10], [5, 15], [5, 20], [5, 25], [5, 30],
+            # [10, -10], [10, -5], [10, 0], [10, 5], [10, 10], [10, 15], [10, 20], [10, 25], [10, 30],
+            # [15, -10], [15, -5], [15, 0], [15, 5], [15, 10], [15, 15], [15, 20], [15, 25], [15, 30],
+            # [20, -10], [20, -5], [20, 0], [20, 5], [20, 10], [20, 15], [20, 20], [20, 25], [20, 30],
+            # [25, -10], [25, -5], [25, 0], [25, 5], [25, 10], [25, 15], [25, 20], [25, 25], [25, 30],
+            # [30, -10], [30, -5], [30, 0], [30, 5], [30, 10], [30, 15], [30, 20], [30, 25], [30, 30]
+
+            #confirmed works entierly
+            # [-20, -10], [-20, -5], [-20, 0], [-20, 5], [-20, 10], [-20, 15], [-20, 20], [-20, 25], [-20, 30],
+            # [-15, -10], [-15, -5], [-15, 0], [-15, 5], [-15, 10], [-15, 15], [-15, 20], [-15, 25], [-15, 30],
+            # [-10, -10], [-10, -5], [-10, 0], [-10, 5], [-10, 10], [-10, 15], [-10, 20], [-10, 25], [-10, 30],
+            # [-5, -10], [-5, -5], [-5, 0], [-5, 5], [-5, 10], [-5, 15], [-5, 20], [-5, 25], [-5, 30],
+            # [0, -10], [0, -5], [0, 0], [0, 5], [0, 10], [0, 15], [0, 20], [0, 25], [0, 30],
+            # [5, -10], [5, -5], [5, 0], [5, 5], [5, 10], [5, 15], [5, 20], [5, 25], [5, 30],
+            # [10, -10], [10, -5], [10, 0], [10, 5], [10, 10], [10, 15], [10, 20], [10, 25], [10, 30],
+            # [15, -10], [15, -5], [15, 0], [15, 5], [15, 10], [15, 15], [15, 20], [15, 25], [15, 30],
+            # [20, -10], [20, -5], [20, 0], [20, 5], [20, 10], [20, 15], [20, 20], [20, 25], [20, 30],
+            # [25, -10], [25, -5], [25, 0], [25, 5], [25, 10], [25, 15], [25, 20], [25, 25], [25, 30],
+            # [30, -10], [30, -5], [30, 0], [30, 5], [30, 10], [30, 15], [30, 20], [30, 25], [30, 30]
+
+
+
+
             [5, 10],
             [15, 5],
             [10, 15]
@@ -145,6 +220,46 @@ class RobotEstimator(object):
         # multiple times, once for each observation,
         # as well
         W_landmarks = self._config.W_range * np.eye(len(self._map.landmarks))
+        self._do_kf_update(nu, C, W_landmarks)
+
+        # Angle wrap afterwards
+        self._x_est[-1] = np.arctan2(np.sin(self._x_est[-1]),
+                                     np.cos(self._x_est[-1]))
+        
+
+    #TODO: implement the bearing and range update landmark method
+    def update_from_landmark_bearing_and_range_observations(self, y_bearing, y_range):
+        # Predicted the landmark measurements and build up the observation Jacobian
+        y_pred = []
+        C = []
+        x_pred = self._x_pred
+        for lm in self._map.landmarks:
+
+            dx_pred = lm[0] - x_pred[0]
+            dy_pred = lm[1] - x_pred[1]
+            range_pred = np.sqrt(dx_pred**2 + dy_pred**2)
+            y_pred.append(range_pred)
+
+            # Jacobian of the measurement model
+            C_range = np.array([
+                -(dx_pred) / range_pred,
+                -(dy_pred) / range_pred,
+                0
+            ])
+            C.append(C_range)
+        # Convert lists to arrays
+        C = np.array(C)
+        y_pred = np.array(y_pred)
+
+        # Innovation. Look new information! (geddit?)
+        nu = np.concatenate((y_bearing - np.arctan2(dy_pred, dx_pred), y_range - y_pred))
+
+        # Since we are oberving a bunch of landmarks
+        # build the covariance matrix. Note you could
+        # swap this to just calling the ekf update call
+        # multiple times, once for each observation,
+        # as well
+        W_landmarks = np.diag([self._config.W_bearing] * len(self._map.landmarks) + [self._config.W_range] * len(self._map.landmarks))
         self._do_kf_update(nu, C, W_landmarks)
 
         # Angle wrap afterwards

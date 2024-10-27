@@ -83,6 +83,21 @@ class Simulator(object):
 
         y = np.array(y)
         return y
+    
+    def landmark_bearing_observations(self):
+        y = []
+        C = []
+        W = self._filter_config.W_bearing
+        for lm in self._map.landmarks:
+            # True bearing measurement (with noise)
+            dx = lm[0] - self._x_true[0]
+            dy = lm[1] - self._x_true[1]
+            bearing_true = np.arctan2(dy, dx)
+            bearing_meas = bearing_true + np.random.normal(0, np.sqrt(W))
+            y.append(bearing_meas)
+
+        y = np.array(y)
+        return y
 
     def x_true(self):
         return self._x_true
@@ -124,6 +139,9 @@ x_true_history = []
 x_est_history = []
 Sigma_est_history = []
 
+# add count for each time the robots statndard deviation is greater than 0.1
+count = [0, 0, 0]
+
 # Main loop
 for step in range(sim_config.time_steps):
 
@@ -145,6 +163,13 @@ for step in range(sim_config.time_steps):
 
     # Get the current state estimate.
     x_est, Sigma_est = estimator.estimate()
+
+    # check if the standard deviation of the state is greater than 0.1 or less then -0.1
+    for i in range(3):
+        if 2*np.sqrt(Sigma_est[i][i]) > 0.1:
+            count[i] += 1
+        elif 2*np.sqrt(Sigma_est[i][i]) < -0.1:
+            count[i] += 1
 
     # Figure out what the controller should do next.
     u = controller.next_control_input(x_est, Sigma_est)
@@ -191,5 +216,8 @@ for s in range(3):
     plt.plot(estimation_error[:, s])
     plt.plot(two_sigma, linestyle='dashed', color='red')
     plt.plot(-two_sigma, linestyle='dashed', color='red')
-    plt.title(state_name[s])
+    #plot a line at 0.1m and -0.1m
+    plt.axhline(y=0.1, color='g', linestyle='dotted')
+    plt.axhline(y=-0.1, color='g', linestyle='dotted')
+    plt.title(f"{state_name[s]}, count: {count[s]}")
     plt.show()
