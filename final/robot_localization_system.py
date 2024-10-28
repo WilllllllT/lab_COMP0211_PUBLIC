@@ -28,45 +28,16 @@ class Map(object):
             # [10, 15],
             # [15, 5],
             # [15, 10],
-            # [15, 15],
+            # [15, 15]
 
-            # [-20, -20],
-            # [-20, -10],
-            # [-20, 0],
-            # [-20, 10],
-            # [-20, 20],
-            # [-10, -20],
-            # [-10, -10],
-            # [-10, 0],
-            # [-10, 10],
-            # [-10, 20],
-            # [0, -20],
-            # [0, -10],
-            # [0, 0],
-            # [0, 10],
-            # [0, 20],
-            # [10, -20],
-            # [10, -10],
-            # [10, 0],
-            # [10, 10],
-            # [10, 20],
-            # [20, -20],
-            # [20, -10],
-            # [20, 0],
-            # [20, 10],
-            # [20, 20]
-
-            # close to achieving stability
-
-            # [-20, -20], [-20, -15], [-20, -10], [-20, -5], [-20, 0], [-20, 5], [-20, 10], [-20, 15], [-20, 20],
-            # [-15, -20], [-15, -15], [-15, -10], [-15, -5], [-15, 0], [-15, 5], [-15, 10], [-15, 15], [-15, 20],
-            # [-10, -20], [-10, -15], [-10, -10], [-10, -5], [-10, 0], [-10, 5], [-10, 10], [-10, 15], [-10, 20],
-            # [-5, -20], [-5, -15], [-5, -10], [-5, -5], [-5, 0], [-5, 5], [-5, 10], [-5, 15], [-5, 20],
-            # [0, -20], [0, -15], [0, -10], [0, -5], [0, 0], [0, 5], [0, 10], [0, 15], [0, 20],
-            # [5, -20], [5, -15], [5, -10], [5, -5], [5, 0], [5, 5], [5, 10], [5, 15], [5, 20],
-            # [10, -20], [10, -15], [10, -10], [10, -5], [10, 0], [10, 5], [10, 10], [10, 15], [10, 20],
-            # [15, -20], [15, -15], [15, -10], [15, -5], [15, 0], [15, 5], [15, 10], [15, 15], [15, 20],
-            # [20, -20], [20, -15], [20, -10], [20, -5], [20, 0], [20, 5], [20, 10], [20, 15], [20, 20]
+            # confirmed works for range and bearing
+            [-15, -15], [-15, -10], [-15, -5], [-15, 0], [-15, 5], [-15, 10], [-15, 15],
+            [-10, -15], [-10, -10], [-10, -5], [-10, 0], [-10, 5], [-10, 10], [-10, 15],
+            [-5, -15], [-5, -10], [-5, -5], [-5, 0], [-5, 5], [-5, 10], [-5, 15],
+            [0, -15], [0, -10], [0, -5], [0, 0], [0, 5], [0, 10], [0, 15],
+            [5, -15], [5, -10], [5, -5], [5, 0], [5, 5], [5, 10], [5, 15],
+            [10, -15], [10, -10], [10, -5], [10, 0], [10, 5], [10, 10], [10, 15],
+            [15, -15], [15, -10], [15, -5], [15, 0], [15, 5], [15, 10], [15, 15]
             
             
             # [-10, -10], [-10, -5], [-10, 0], [-10, 5], [-10, 10], [-10, 15], [-10, 20], [-10, 25], [-10, 30],
@@ -79,18 +50,18 @@ class Map(object):
             # [25, -10], [25, -5], [25, 0], [25, 5], [25, 10], [25, 15], [25, 20], [25, 25], [25, 30],
             # [30, -10], [30, -5], [30, 0], [30, 5], [30, 10], [30, 15], [30, 20], [30, 25], [30, 30]
 
-            #confirmed works entierly
-            [-20, -10], [-20, -5], [-20, 0], [-20, 5], [-20, 10], [-20, 15], [-20, 20], [-20, 25], [-20, 30],
-            [-15, -10], [-15, -5], [-15, 0], [-15, 5], [-15, 10], [-15, 15], [-15, 20], [-15, 25], [-15, 30],
-            [-10, -10], [-10, -5], [-10, 0], [-10, 5], [-10, 10], [-10, 15], [-10, 20], [-10, 25], [-10, 30],
-            [-5, -10], [-5, -5], [-5, 0], [-5, 5], [-5, 10], [-5, 15], [-5, 20], [-5, 25], [-5, 30],
-            [0, -10], [0, -5], [0, 0], [0, 5], [0, 10], [0, 15], [0, 20], [0, 25], [0, 30],
-            [5, -10], [5, -5], [5, 0], [5, 5], [5, 10], [5, 15], [5, 20], [5, 25], [5, 30],
-            [10, -10], [10, -5], [10, 0], [10, 5], [10, 10], [10, 15], [10, 20], [10, 25], [10, 30],
-            [15, -10], [15, -5], [15, 0], [15, 5], [15, 10], [15, 15], [15, 20], [15, 25], [15, 30],
-            [20, -10], [20, -5], [20, 0], [20, 5], [20, 10], [20, 15], [20, 20], [20, 25], [20, 30],
-            [25, -10], [25, -5], [25, 0], [25, 5], [25, 10], [25, 15], [25, 20], [25, 25], [25, 30],
-            [30, -10], [30, -5], [30, 0], [30, 5], [30, 10], [30, 15], [30, 20], [30, 25], [30, 30]
+            #confirmed works entierly for just range
+            # [-20, -10], [-20, -5], [-20, 0], [-20, 5], [-20, 10], [-20, 15], [-20, 20], [-20, 25], [-20, 30],
+            # [-15, -10], [-15, -5], [-15, 0], [-15, 5], [-15, 10], [-15, 15], [-15, 20], [-15, 25], [-15, 30],
+            # [-10, -10], [-10, -5], [-10, 0], [-10, 5], [-10, 10], [-10, 15], [-10, 20], [-10, 25], [-10, 30],
+            # [-5, -10], [-5, -5], [-5, 0], [-5, 5], [-5, 10], [-5, 15], [-5, 20], [-5, 25], [-5, 30],
+            # [0, -10], [0, -5], [0, 0], [0, 5], [0, 10], [0, 15], [0, 20], [0, 25], [0, 30],
+            # [5, -10], [5, -5], [5, 0], [5, 5], [5, 10], [5, 15], [5, 20], [5, 25], [5, 30],
+            # [10, -10], [10, -5], [10, 0], [10, 5], [10, 10], [10, 15], [10, 20], [10, 25], [10, 30],
+            # [15, -10], [15, -5], [15, 0], [15, 5], [15, 10], [15, 15], [15, 20], [15, 25], [15, 30],
+            # [20, -10], [20, -5], [20, 0], [20, 5], [20, 10], [20, 15], [20, 20], [20, 25], [20, 30],
+            # [25, -10], [25, -5], [25, 0], [25, 5], [25, 10], [25, 15], [25, 20], [25, 25], [25, 30],
+            # [30, -10], [30, -5], [30, 0], [30, 5], [30, 10], [30, 15], [30, 20], [30, 25], [30, 30]
 
 
 
@@ -176,10 +147,13 @@ class RobotEstimator(object):
     # Implement the Kalman filter update step.
     def _do_kf_update(self, nu, C, W):
         # error check the dimensions
-        print("C: ", C.shape)
-        print("W: ", W.shape)
-        print("Sigma_pred: ", self._Sigma_pred.shape)
-        print("nu: ", nu.shape)
+        count = 0
+        if count == 0:
+            print("C: ", C.shape)
+            print("W: ", W.shape)
+            print("Sigma_pred: ", self._Sigma_pred.shape)
+            print("nu: ", nu.shape)
+            count += 1
 
 
         # Kalman Gain
@@ -244,14 +218,14 @@ class RobotEstimator(object):
         C_b = []
         x_pred = self._x_pred
         for lm in self._map.landmarks:
-
             dx_pred = lm[0] - x_pred[0]
             dy_pred = lm[1] - x_pred[1]
             
-
-            bearing_pred = np.arctan2(dy_pred, dx_pred) - x_pred[2] 
+            #calculate the predictions for bearing and range
+            bearing_pred = np.arctan2(dy_pred, dx_pred) - x_pred[2]
             range_pred = np.sqrt(dx_pred**2 + dy_pred**2)
 
+            #wrap the bearing prediction again to keep results consistent
             y_pred_r.append(range_pred)
             y_pred_b.append(bearing_pred)
 
@@ -262,7 +236,7 @@ class RobotEstimator(object):
                 0
             ])
 
-            # Jacobian of the measurement model
+            # Jacobian of the measurement model using equation 9
             C_bearing = np.array([
                 dy_pred / (dx_pred**2 + dy_pred**2),
                 -dx_pred / (dx_pred**2 + dy_pred**2),
@@ -271,10 +245,11 @@ class RobotEstimator(object):
 
             C_r.append(C_range)
             C_b.append(C_bearing)
+        
         # Convert lists to arrays
         C_r = np.array(C_r)
         C_b = np.array(C_b)
-        C = np.vstack((C_r, C_b))  # Shape: (2 * num_landmarks, 3)
+        C = np.vstack((C_r, C_b))
 
         y_pred_r = np.array(y_pred_r)
         y_pred_b = np.array(y_pred_b)
@@ -282,7 +257,11 @@ class RobotEstimator(object):
         # Innovation. Look new information! (geddit?)
         nu_r = y_range - y_pred_r
         nu_b = y_bearing - y_pred_b
-        nu = np.concatenate((nu_r, nu_b))  # Shape: (2 * num_landmarks,)
+
+        #wrapping the bearing error
+        nu_b = np.arctan2(np.sin(nu_b), np.cos(nu_b))
+        nu = np.hstack((nu_r, nu_b))
+        
 
         # Since we are oberving a bunch of landmarks
         # build the covariance matrix. Note you could
@@ -291,14 +270,17 @@ class RobotEstimator(object):
         # as well
         W_landmarks_r = self._config.W_range * np.eye(len(self._map.landmarks))
         W_landmarks_b = self._config.W_bearing * np.eye(len(self._map.landmarks))
-        W_landmarks = np.block([
+
+        # combine the two covariance matrices to create a 6x6 matrix
+        W = np.block([
             [W_landmarks_r, np.zeros_like(W_landmarks_r)],
             [np.zeros_like(W_landmarks_b), W_landmarks_b]
-        ])  # Shape: (2 * num_landmarks, 2 * num_landmarks)
+        ])
 
-        self._do_kf_update(nu, C, W_landmarks)
+        self._do_kf_update(nu, C, W)
 
 
         # Angle wrap afterwards
         self._x_est[-1] = np.arctan2(np.sin(self._x_est[-1]),
                                      np.cos(self._x_est[-1]))
+

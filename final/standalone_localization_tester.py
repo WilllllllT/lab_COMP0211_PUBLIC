@@ -89,12 +89,13 @@ class Simulator(object):
         C = []
         W = self._filter_config.W_bearing
         for lm in self._map.landmarks:
-            # True bearing measurement (with noise)
             dx = lm[0] - self._x_true[0]
             dy = lm[1] - self._x_true[1]
-            # calculate the bearing using arctan2 and compensate using angle wrapping
-            bearing_true = np.arctan2(dy, dx)
+            
+            bearing_true = np.arctan2(dy, dx) - self._x_true[2]
             bearing_meas = bearing_true + np.random.normal(0, np.sqrt(W))
+            #wrap the angle
+            bearing_meas = np.arctan2(np.sin(bearing_meas), np.cos(bearing_meas))
             y.append(bearing_meas)
 
         y = np.array(y)
@@ -164,7 +165,6 @@ for step in range(sim_config.time_steps):
 
 
     # Update the filter with the latest observations.
-    #estimator.update_from_landmark_range_observations(y_r)
     estimator.update_from_landmark_observations(y_r, y_b)
 
     # Get the current state estimate.
@@ -215,7 +215,7 @@ def wrap_angle(angle): return np.arctan2(np.sin(angle), np.cos(angle))
 # Plot the 2 standard deviation and error history for each state.
 state_name = ['x', 'y', 'θ']
 estimation_error = x_est_history - x_true_history
-estimation_error[:, -1] = wrap_angle(estimation_error[:, -1])
+#estimation_error[:, -1] = wrap_angle(estimation_error[:, -1])
 for s in range(3):
     plt.figure()
     two_sigma = 2*np.sqrt(Sigma_est_history[:, s])
@@ -227,3 +227,13 @@ for s in range(3):
     plt.axhline(y=-0.1, color='g', linestyle='dotted')
     plt.title(f"{state_name[s]}, count: {count[s]}")
     plt.show()
+
+for s in range(3):
+
+    # plot the error in bearing measurments, the x_est_history[:, -1] is the estimated angle and the x_true_history[:, -1] is the true angle
+    plt.figure()
+    plt.plot(x_true_history[:, s])
+    plt.plot(x_est_history[:, s])
+    plt.title("Error in bearing measurments")
+    plt.show()
+
