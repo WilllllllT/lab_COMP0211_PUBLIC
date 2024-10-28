@@ -3,7 +3,7 @@ import time
 import os
 import matplotlib.pyplot as plt
 from simulation_and_control import pb, MotorCommands, PinWrapper, feedback_lin_ctrl, SinusoidalReference, CartesianDiffKin, differential_drive_controller_adjusting_bearing
-from simulation_and_control import differential_drive_regulation_controller,regulation_polar_coordinates,regulation_polar_coordinate_quat,wrap_angle,velocity_to_wheel_angular_velocity
+from simulation_and_control import differential_drive_regulation_controller,regulation_polar_coordinates,regulation_polar_coordinate_quat,wrap_angle, velocity_to_wheel_angular_velocity
 import pinocchio as pin
 from regulator_model import RegulatorModel
 
@@ -76,7 +76,7 @@ def main():
 
    
     # Initialize data storage
-    base_pos_all, base_bearing_all = [], []#
+    base_pos_all, base_bearing_all = [], []
 
     # initializing MPC
      # Define the matrices
@@ -95,11 +95,14 @@ def main():
     regulator = RegulatorModel(N_mpc, num_states, num_joints, num_states)
     # update A,B,C matrices
     # TODO provide state_x_for_linearization,cur_u_for_linearization to linearize the system
+    state_x_for_linearization = np.zeros((num_states,1))
+    cur_u_for_linearization = np.zeros((num_controls,1))
+
     # you can linearize around the final state and control of the robot (everything zero)
     # or you can linearize around the current state and control of the robot
     # in the second case case you need to update the matrices A and B at each time step
     # and recall everytime the method updateSystemMatrices
-    regulator.updateSystemMatrices(sim,state_x_for_linearization,cur_u_for_linearization)
+    regulator.updateSystemMatrices(sim, state_x_for_linearization, cur_u_for_linearization)
     # Define the cost matrices
     Qcoeff = 1000
     Rcoeff = 1
@@ -115,6 +118,12 @@ def main():
     ##### MPC control action #######
     v_linear = 0.0
     v_angular = 0.0
+
+    cmd = MotorCommands()  # Initialize command structure for motors
+    init_angular_wheels_velocity_cmd = np.array([0.0, 0.0, 0.0, 0.0])
+    init_interface_all_wheels = ["velocity", "velocity", "velocity", "velocity"]
+    cmd.SetControlCmd(init_angular_wheels_velocity_cmd, init_interface_all_wheels)
+ 
 
     while True:
 

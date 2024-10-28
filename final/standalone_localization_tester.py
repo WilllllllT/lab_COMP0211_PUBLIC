@@ -165,6 +165,7 @@ for step in range(sim_config.time_steps):
 
 
     # Update the filter with the latest observations.
+    #estimator.update_from_landmark_range_observations(y_r)
     estimator.update_from_landmark_observations(y_r, y_b)
 
     # Get the current state estimate.
