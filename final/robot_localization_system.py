@@ -80,24 +80,24 @@ class Map(object):
             # [30, -10], [30, -5], [30, 0], [30, 5], [30, 10], [30, 15], [30, 20], [30, 25], [30, 30]
 
             #confirmed works entierly
-            # [-20, -10], [-20, -5], [-20, 0], [-20, 5], [-20, 10], [-20, 15], [-20, 20], [-20, 25], [-20, 30],
-            # [-15, -10], [-15, -5], [-15, 0], [-15, 5], [-15, 10], [-15, 15], [-15, 20], [-15, 25], [-15, 30],
-            # [-10, -10], [-10, -5], [-10, 0], [-10, 5], [-10, 10], [-10, 15], [-10, 20], [-10, 25], [-10, 30],
-            # [-5, -10], [-5, -5], [-5, 0], [-5, 5], [-5, 10], [-5, 15], [-5, 20], [-5, 25], [-5, 30],
-            # [0, -10], [0, -5], [0, 0], [0, 5], [0, 10], [0, 15], [0, 20], [0, 25], [0, 30],
-            # [5, -10], [5, -5], [5, 0], [5, 5], [5, 10], [5, 15], [5, 20], [5, 25], [5, 30],
-            # [10, -10], [10, -5], [10, 0], [10, 5], [10, 10], [10, 15], [10, 20], [10, 25], [10, 30],
-            # [15, -10], [15, -5], [15, 0], [15, 5], [15, 10], [15, 15], [15, 20], [15, 25], [15, 30],
-            # [20, -10], [20, -5], [20, 0], [20, 5], [20, 10], [20, 15], [20, 20], [20, 25], [20, 30],
-            # [25, -10], [25, -5], [25, 0], [25, 5], [25, 10], [25, 15], [25, 20], [25, 25], [25, 30],
-            # [30, -10], [30, -5], [30, 0], [30, 5], [30, 10], [30, 15], [30, 20], [30, 25], [30, 30]
+            [-20, -10], [-20, -5], [-20, 0], [-20, 5], [-20, 10], [-20, 15], [-20, 20], [-20, 25], [-20, 30],
+            [-15, -10], [-15, -5], [-15, 0], [-15, 5], [-15, 10], [-15, 15], [-15, 20], [-15, 25], [-15, 30],
+            [-10, -10], [-10, -5], [-10, 0], [-10, 5], [-10, 10], [-10, 15], [-10, 20], [-10, 25], [-10, 30],
+            [-5, -10], [-5, -5], [-5, 0], [-5, 5], [-5, 10], [-5, 15], [-5, 20], [-5, 25], [-5, 30],
+            [0, -10], [0, -5], [0, 0], [0, 5], [0, 10], [0, 15], [0, 20], [0, 25], [0, 30],
+            [5, -10], [5, -5], [5, 0], [5, 5], [5, 10], [5, 15], [5, 20], [5, 25], [5, 30],
+            [10, -10], [10, -5], [10, 0], [10, 5], [10, 10], [10, 15], [10, 20], [10, 25], [10, 30],
+            [15, -10], [15, -5], [15, 0], [15, 5], [15, 10], [15, 15], [15, 20], [15, 25], [15, 30],
+            [20, -10], [20, -5], [20, 0], [20, 5], [20, 10], [20, 15], [20, 20], [20, 25], [20, 30],
+            [25, -10], [25, -5], [25, 0], [25, 5], [25, 10], [25, 15], [25, 20], [25, 25], [25, 30],
+            [30, -10], [30, -5], [30, 0], [30, 5], [30, 10], [30, 15], [30, 20], [30, 25], [30, 30]
 
 
 
 
-            [5, 10],
-            [15, 5],
-            [10, 15]
+            # [5, 10],
+            # [15, 5],
+            # [10, 15]
         ])
 
 
@@ -175,6 +175,12 @@ class RobotEstimator(object):
 
     # Implement the Kalman filter update step.
     def _do_kf_update(self, nu, C, W):
+        # error check the dimensions
+        print("C: ", C.shape)
+        print("W: ", W.shape)
+        print("Sigma_pred: ", self._Sigma_pred.shape)
+        print("nu: ", nu.shape)
+
 
         # Kalman Gain
         SigmaXZ = self._Sigma_pred @ C.T
@@ -186,6 +192,8 @@ class RobotEstimator(object):
 
         # Covariance update
         self._Sigma_est = (np.eye(len(self._x_est)) - K @ C) @ self._Sigma_pred
+
+    
 
     def update_from_landmark_range_observations(self, y_range):
 
@@ -228,17 +236,24 @@ class RobotEstimator(object):
         
 
     #TODO: implement the bearing and range update landmark method
-    def update_from_landmark_bearing_and_range_observations(self, y_bearing, y_range):
+    def update_from_landmark_observations(self, y_range ,y_bearing):
         # Predicted the landmark measurements and build up the observation Jacobian
-        y_pred = []
-        C = []
+        y_pred_r = []
+        y_pred_b = []
+        C_r = []
+        C_b = []
         x_pred = self._x_pred
         for lm in self._map.landmarks:
 
             dx_pred = lm[0] - x_pred[0]
             dy_pred = lm[1] - x_pred[1]
+            
+
+            bearing_pred = np.arctan2(dy_pred, dx_pred) - x_pred[2] 
             range_pred = np.sqrt(dx_pred**2 + dy_pred**2)
-            y_pred.append(range_pred)
+
+            y_pred_r.append(range_pred)
+            y_pred_b.append(bearing_pred)
 
             # Jacobian of the measurement model
             C_range = np.array([
@@ -246,21 +261,43 @@ class RobotEstimator(object):
                 -(dy_pred) / range_pred,
                 0
             ])
-            C.append(C_range)
+
+            # Jacobian of the measurement model
+            C_bearing = np.array([
+                dy_pred / (dx_pred**2 + dy_pred**2),
+                -dx_pred / (dx_pred**2 + dy_pred**2),
+                -1
+            ])
+
+            C_r.append(C_range)
+            C_b.append(C_bearing)
         # Convert lists to arrays
-        C = np.array(C)
-        y_pred = np.array(y_pred)
+        C_r = np.array(C_r)
+        C_b = np.array(C_b)
+        C = np.vstack((C_r, C_b))  # Shape: (2 * num_landmarks, 3)
+
+        y_pred_r = np.array(y_pred_r)
+        y_pred_b = np.array(y_pred_b)
 
         # Innovation. Look new information! (geddit?)
-        nu = np.concatenate((y_bearing - np.arctan2(dy_pred, dx_pred), y_range - y_pred))
+        nu_r = y_range - y_pred_r
+        nu_b = y_bearing - y_pred_b
+        nu = np.concatenate((nu_r, nu_b))  # Shape: (2 * num_landmarks,)
 
         # Since we are oberving a bunch of landmarks
         # build the covariance matrix. Note you could
         # swap this to just calling the ekf update call
         # multiple times, once for each observation,
         # as well
-        W_landmarks = np.diag([self._config.W_bearing] * len(self._map.landmarks) + [self._config.W_range] * len(self._map.landmarks))
+        W_landmarks_r = self._config.W_range * np.eye(len(self._map.landmarks))
+        W_landmarks_b = self._config.W_bearing * np.eye(len(self._map.landmarks))
+        W_landmarks = np.block([
+            [W_landmarks_r, np.zeros_like(W_landmarks_r)],
+            [np.zeros_like(W_landmarks_b), W_landmarks_b]
+        ])  # Shape: (2 * num_landmarks, 2 * num_landmarks)
+
         self._do_kf_update(nu, C, W_landmarks)
+
 
         # Angle wrap afterwards
         self._x_est[-1] = np.arctan2(np.sin(self._x_est[-1]),

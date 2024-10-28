@@ -92,6 +92,7 @@ class Simulator(object):
             # True bearing measurement (with noise)
             dx = lm[0] - self._x_true[0]
             dy = lm[1] - self._x_true[1]
+            # calculate the bearing using arctan2 and compensate using angle wrapping
             bearing_true = np.arctan2(dy, dx)
             bearing_meas = bearing_true + np.random.normal(0, np.sqrt(W))
             y.append(bearing_meas)
@@ -156,10 +157,15 @@ for step in range(sim_config.time_steps):
     estimator.predict_to(simulation_time)
 
     # Get the landmark observations.
-    y = simulator.landmark_range_observations()
+    y_r = simulator.landmark_range_observations()
+    #print(y_r)
+    y_b = simulator.landmark_bearing_observations()
+    #print(y_b)
+
 
     # Update the filter with the latest observations.
-    estimator.update_from_landmark_range_observations(y)
+    #estimator.update_from_landmark_range_observations(y_r)
+    estimator.update_from_landmark_observations(y_r, y_b)
 
     # Get the current state estimate.
     x_est, Sigma_est = estimator.estimate()
