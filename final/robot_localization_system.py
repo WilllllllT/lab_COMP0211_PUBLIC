@@ -19,7 +19,45 @@ class FilterConfiguration(object):
 #setting the land marks for the map
 class Map(object):
     def __init__(self):
-        self.landmarks = np.array([
+        # Define radii for the outer and inner circles
+        outer_radius = 35  # Radius of the outer circle
+        inner_radius = 15  # Radius of the inner circle
+
+        # Define the number of landmarks for each circle
+        num_landmarks_outer = 20  # Number of landmarks on the outer circle
+        num_landmarks_inner = 10  # Number of landmarks on the inner circle
+
+        # Create outer circle landmarks
+        angles_outer = np.linspace(0, 2 * np.pi, num_landmarks_outer, endpoint=False)
+        outer_circle_landmarks = [
+            [outer_radius * np.cos(angle), outer_radius * np.sin(angle)] for angle in angles_outer
+        ]
+
+        # Create inner circle landmarks
+        angles_inner = np.linspace(0, 2 * np.pi, num_landmarks_inner, endpoint=False)
+        inner_circle_landmarks = [
+            [inner_radius * np.cos(angle), inner_radius * np.sin(angle)] for angle in angles_inner
+        ]
+
+
+
+        # Combine the landmarks from both circles
+        self.landmarks = np.array(outer_circle_landmarks + inner_circle_landmarks + [[0,0]])
+        
+        #grid pattern
+        # Generate a grid of landmark coordinates from -30 to 30 with a step of 5
+        # x = np.arange(-30, 35, 5)
+        # y = np.arange(-30, 35, 5)
+
+        # # Create a grid with all combinations of x and y
+        # xx, yy = np.meshgrid(x, y)
+        # landmarks = np.column_stack([xx.ravel(), yy.ravel()])
+
+        # # Set the landmarks as an attribute
+        # self.landmarks = landmarks
+
+
+        # self.landmarks = np.array([
             # [5, 5],
             # [5, 10],
             # [5, 15],
@@ -31,13 +69,13 @@ class Map(object):
             # [15, 15]
 
             # confirmed works for range and bearing
-            [-15, -15], [-15, -10], [-15, -5], [-15, 0], [-15, 5], [-15, 10], [-15, 15],
-            [-10, -15], [-10, -10], [-10, -5], [-10, 0], [-10, 5], [-10, 10], [-10, 15],
-            [-5, -15], [-5, -10], [-5, -5], [-5, 0], [-5, 5], [-5, 10], [-5, 15],
-            [0, -15], [0, -10], [0, -5], [0, 0], [0, 5], [0, 10], [0, 15],
-            [5, -15], [5, -10], [5, -5], [5, 0], [5, 5], [5, 10], [5, 15],
-            [10, -15], [10, -10], [10, -5], [10, 0], [10, 5], [10, 10], [10, 15],
-            [15, -15], [15, -10], [15, -5], [15, 0], [15, 5], [15, 10], [15, 15]
+            # [-15, -15], [-15, -10], [-15, -5], [-15, 0], [-15, 5], [-15, 10], [-15, 15],
+            # [-10, -15], [-10, -10], [-10, -5], [-10, 0], [-10, 5], [-10, 10], [-10, 15],
+            # [-5, -15], [-5, -10], [-5, -5], [-5, 0], [-5, 5], [-5, 10], [-5, 15],
+            # [0, -15], [0, -10], [0, -5], [0, 0], [0, 5], [0, 10], [0, 15],
+            # [5, -15], [5, -10], [5, -5], [5, 0], [5, 5], [5, 10], [5, 15],
+            # [10, -15], [10, -10], [10, -5], [10, 0], [10, 5], [10, 10], [10, 15],
+            # [15, -15], [15, -10], [15, -5], [15, 0], [15, 5], [15, 10], [15, 15]
             
             
             # [-10, -10], [-10, -5], [-10, 0], [-10, 5], [-10, 10], [-10, 15], [-10, 20], [-10, 25], [-10, 30],
@@ -78,7 +116,7 @@ class Map(object):
             # [5, 10],
             # [15, 5],
             # [10, 15]
-        ])
+        # ])
 
 
 class RobotEstimator(object):
@@ -156,14 +194,10 @@ class RobotEstimator(object):
     # Implement the Kalman filter update step.
     def _do_kf_update(self, nu, C, W):
         # error check the dimensions
-        count = 0
-        if count == 0:
-            print("C: ", C.shape)
-            print("W: ", W.shape)
-            print("Sigma_pred: ", self._Sigma_pred.shape)
-            print("nu: ", nu.shape)
-            count += 1
-
+    #     print("C: ", C.shape)
+    #     print("W: ", W.shape)
+    #     print("Sigma_pred: ", self._Sigma_pred.shape)
+    #     print("nu: ", nu.shape)
 
         # Kalman Gain
         SigmaXZ = self._Sigma_pred @ C.T
@@ -233,6 +267,9 @@ class RobotEstimator(object):
             
             #fix dy and dx to show the range by taking the square root of the sum of the squares
             range_pred = np.sqrt(dx_pred**2 + dy_pred**2)
+
+            #wrap
+            theta_pred = np.arctan2(np.sin(theta_pred), np.cos(theta_pred))
 
             #wrap the bearing prediction again to keep results consistent
             y_pred_r.append(range_pred)

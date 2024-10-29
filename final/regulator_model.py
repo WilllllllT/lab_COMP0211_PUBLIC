@@ -78,6 +78,8 @@ class RegulatorModel:
                       [time_step*np.sin(cur_x[2]), 0],
                       [0, time_step]])
         
+
+        
         # get A and B matrices by linearinzing the cotinuous system dynamics
         # The linearized continuous-time system is:
 

@@ -191,6 +191,21 @@ x_true_history = np.array(x_true_history)
 x_est_history = np.array(x_est_history)
 Sigma_est_history = np.array(Sigma_est_history)
 
+# Calculate position errors (Euclidean distance)
+position_errors = np.sqrt((x_true_history[:, 0] - x_est_history[:, 0]) ** 2 +
+                          (x_true_history[:, 1] - x_est_history[:, 1]) ** 2)
+
+# Convert position errors to cm
+position_errors_cm = position_errors * 100
+
+# Calculate the standard deviation of the position error in cm
+std_dev_position_error_cm = np.std(position_errors_cm)
+
+# Print the result
+print(f"Standard deviation of the position error: {std_dev_position_error_cm:.2f} cm")
+
+ 
+
 # Plotting the true path, estimated path, and landmarks.
 plt.figure()
 plt.plot(x_true_history[:, 0], x_true_history[:, 1], label='True Path')
@@ -216,7 +231,7 @@ def wrap_angle(angle): return np.arctan2(np.sin(angle), np.cos(angle))
 # Plot the 2 standard deviation and error history for each state.
 state_name = ['x', 'y', 'θ']
 estimation_error = x_est_history - x_true_history
-#estimation_error[:, -1] = wrap_angle(estimation_error[:, -1])
+estimation_error[:, -1] = wrap_angle(estimation_error[:, -1])
 for s in range(3):
     plt.figure()
     two_sigma = 2*np.sqrt(Sigma_est_history[:, s])
@@ -224,13 +239,13 @@ for s in range(3):
     plt.plot(two_sigma, linestyle='dashed', color='red')
     plt.plot(-two_sigma, linestyle='dashed', color='red')
     #plot a line at 0.1m and -0.1m
-    plt.axhline(y=0.1, color='g', linestyle='dotted')
-    plt.axhline(y=-0.1, color='g', linestyle='dotted')
+    if s != 2:
+        plt.axhline(y=0.1, color='g', linestyle='dotted')
+        plt.axhline(y=-0.1, color='g', linestyle='dotted')
     plt.title(f"{state_name[s]}, count: {count[s]}")
     plt.show()
 
 for s in range(3):
-
     # plot the error in bearing measurments, the x_est_history[:, -1] is the estimated angle and the x_true_history[:, -1] is the true angle
     plt.figure()
     plt.plot(x_true_history[:, s])
