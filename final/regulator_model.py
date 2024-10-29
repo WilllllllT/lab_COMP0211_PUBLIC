@@ -68,6 +68,15 @@ class RegulatorModel:
         num_controls = self.m
         num_outputs = self.q
         time_step = sim.GetTimeStep()
+
+        #cur_x size is (3,1) (x, y, theta) and cur_u size is (2,1) (v, omega)
+        A = np.array([[1, 0, -cur_u[0]*time_step*np.sin(cur_x[2])],
+                      [0, 1, cur_u[0]*time_step*np.cos(cur_x[2])],
+                      [0, 0, 1]])
+        
+        B = np.array([[time_step*np.cos(cur_x[2]), 0],
+                      [time_step*np.sin(cur_x[2]), 0],
+                      [0, time_step]])
         
         # get A and B matrices by linearinzing the cotinuous system dynamics
         # The linearized continuous-time system is:
@@ -135,7 +144,7 @@ class RegulatorModel:
 
 
         # then linearize A and B matrices
-        #\[
+        # \[
         # A = I + \Delta t \cdot A_c,
         # \]
         # \[

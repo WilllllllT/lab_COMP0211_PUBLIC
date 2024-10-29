@@ -229,14 +229,14 @@ class RobotEstimator(object):
         for lm in self._map.landmarks:
             dx_pred = lm[0] - x_pred[0]
             dy_pred = lm[1] - x_pred[1]
+            theta_pred = np.arctan2(dy_pred, dx_pred) - x_pred[2]
             
-            #calculate the predictions for bearing and range
-            bearing_pred = np.arctan2(dy_pred, dx_pred) - x_pred[2]
+            #fix dy and dx to show the range by taking the square root of the sum of the squares
             range_pred = np.sqrt(dx_pred**2 + dy_pred**2)
 
             #wrap the bearing prediction again to keep results consistent
             y_pred_r.append(range_pred)
-            y_pred_b.append(bearing_pred)
+            y_pred_b.append(theta_pred)
 
             # Jacobian of the measurement model
             C_range = np.array([
