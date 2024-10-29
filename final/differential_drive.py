@@ -3,7 +3,7 @@ import time
 import os
 import matplotlib.pyplot as plt
 from simulation_and_control import pb, MotorCommands, PinWrapper, feedback_lin_ctrl, SinusoidalReference, CartesianDiffKin, differential_drive_controller_adjusting_bearing
-from simulation_and_control import differential_drive_regulation_controller,regulation_polar_coordinates,regulation_polar_coordinate_quat,wrap_angle, velocity_to_wheel_angular_velocity
+from simulation_and_control import differential_drive_regulation_controller,regulation_polar_coordinates,regulation_polar_coordinate_quat,wrap_angle,velocity_to_wheel_angular_velocity
 import pinocchio as pin
 from regulator_model import RegulatorModel
 
@@ -16,7 +16,7 @@ landmarks = np.array([
         ])
 
 
-def landmark_range_observations(self, base_position):
+def landmark_range_observations(base_position):
     y = []
     C = []
     W = W_range
@@ -51,7 +51,7 @@ def quaternion2bearing(q_w, q_x, q_y, q_z):
 def init_simulator(conf_file_name):
     """Initialize simulation and dynamic model."""
     cur_dir = os.path.dirname(os.path.abspath(__file__))
-    sim = pb.SimInterface(conf_file_name, conf_file_path_ext=cur_dir)
+    sim = pb.SimInterface(conf_file_name, conf_file_path_ext=cur_dir, use_gui=False)
     
     ext_names = np.expand_dims(np.array(sim.getNameActiveJoints()), axis=0)
     source_names = ["pybullet"]
@@ -68,11 +68,12 @@ def main():
     sim,dyn_model,num_joints=init_simulator(conf_file_name)
 
     # adjusting floor friction
-    floor_friction = 1
+    floor_friction = 100
     sim.SetFloorFriction(floor_friction)
     # getting time step
     time_step = sim.GetTimeStep()
     current_time = 0
+    total_time_steps = 0
 
    
     # Initialize data storage
@@ -89,27 +90,29 @@ def main():
     C = np.eye(num_states)
     
     # Horizon length
-    N_mpc = 10
+    N_mpc = 3
 
     # Initialize the regulator model
-    regulator = RegulatorModel(N_mpc, num_states, num_joints, num_states)
+    regulator = RegulatorModel(N_mpc, num_states, num_controls, num_states)
     # update A,B,C matrices
     # TODO provide state_x_for_linearization,cur_u_for_linearization to linearize the system
-    state_x_for_linearization = np.zeros((num_states,1))
-    cur_u_for_linearization = np.zeros((num_controls,1))
-
     # you can linearize around the final state and control of the robot (everything zero)
     # or you can linearize around the current state and control of the robot
     # in the second case case you need to update the matrices A and B at each time step
     # and recall everytime the method updateSystemMatrices
-    regulator.updateSystemMatrices(sim, state_x_for_linearization, cur_u_for_linearization)
+    init_pos  = np.array([2.0, 3.0])
+    init_quat = np.array([0,0,0.3827,0.9239])
+    init_base_bearing_ = quaternion2bearing(init_quat[3], init_quat[0], init_quat[1], init_quat[2])
+    cur_state_x_for_linearization = [init_pos[0], init_pos[1], init_base_bearing_]
+    cur_u_for_linearization = np.zeros(num_controls)
+    regulator.updateSystemMatrices(sim,cur_state_x_for_linearization,cur_u_for_linearization)
     # Define the cost matrices
-    Qcoeff = 1000
-    Rcoeff = 1
+    Qcoeff = np.array([310, 310, 80])
+    Rcoeff = 0.5
     regulator.setCostMatrices(Qcoeff,Rcoeff)
    
 
-
+    u_mpc = np.zeros(num_controls)
 
     ##### robot parameters ########
     wheel_radius = 0.11
@@ -118,14 +121,12 @@ def main():
     ##### MPC control action #######
     v_linear = 0.0
     v_angular = 0.0
-
     cmd = MotorCommands()  # Initialize command structure for motors
     init_angular_wheels_velocity_cmd = np.array([0.0, 0.0, 0.0, 0.0])
     init_interface_all_wheels = ["velocity", "velocity", "velocity", "velocity"]
     cmd.SetControlCmd(init_angular_wheels_velocity_cmd, init_interface_all_wheels)
- 
-
-    while True:
+    
+    while total_time_steps < 10000:
 
 
         # True state propagation (with process noise)
@@ -157,13 +158,17 @@ def main():
 
         # Figure out what the controller should do next
         # MPC section/ low level controller section ##################################################################
-        cmd = MotorCommands()  # Initialize command structure for motors
+       
    
         # Compute the matrices needed for MPC optimization
         # TODO here you want to update the matrices A and B at each time step if you want to linearize around the current points
+        # add this 3 lines if you want to update the A and B matrices at each time step 
+        # cur_state_x_for_linearization = [base_pos[0], base_pos[1], base_bearing_]
+        # cur_u_for_linearization = u_mpc
+        # regulator.updateSystemMatrices(sim,cur_state_x_for_linearization,cur_u_for_linearization)
         S_bar, T_bar, Q_bar, R_bar = regulator.propagation_model_regulator_fixed_std()
         H,F = regulator.compute_H_and_F(S_bar, T_bar, Q_bar, R_bar)
-        x0_mpc = np.vstack((base_pos[:2], base_bearing_))
+        x0_mpc = np.hstack((base_pos[:2], base_bearing_))
         x0_mpc = x0_mpc.flatten()
         # Compute the optimal control sequence
         H_inv = np.linalg.inv(H)
@@ -177,8 +182,6 @@ def main():
         cmd.SetControlCmd(angular_wheels_velocity_cmd, interface_all_wheels)
 
 
-       
-
         # Exit logic with 'q' key (unchanged)
         keys = sim.GetPyBulletClient().getKeyboardEvents()
         qKey = ord('q')
@@ -186,21 +189,40 @@ def main():
             break
         
 
-
         # Store data for plotting if necessary
         base_pos_all.append(base_pos)
         base_bearing_all.append(base_bearing_)
 
         # Update current time
         current_time += time_step
+        total_time_steps += 1
 
+        print(total_time_steps)
+        
 
     # Plotting 
     #add visualization of final x, y, trajectory and theta
-    
-    
-    
-    
+    base_pos_all = np.array(base_pos_all)
+    base_bearing_all = np.array(base_bearing_all)
+    plt.figure()
+    plt.plot(base_pos_all[:, 0], base_pos_all[:, 1], 'b-', label='Robot Trajectory')
+    plt.xlabel('x [m]')
+    plt.ylabel('y [m]')
+    plt.title('Robot Trajectory')
+    plt.legend()
+    plt.grid()
+    plt.show()
+
+    plt.figure()
+    plt.plot(base_bearing_all, 'r-', label='Robot Bearing')
+    plt.xlabel('Time Step')
+    plt.ylabel('Bearing [rad]')
+    plt.title('Robot Bearing')
+    plt.legend()
+    plt.grid()
+    plt.show()
+
+
 
 if __name__ == '__main__':
     main()

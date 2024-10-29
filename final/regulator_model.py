@@ -66,19 +66,26 @@ class RegulatorModel:
         B = []
         num_states = self.n
         num_controls = self.m
+        #use the number of states and control inputs to create the A and B matrices
         num_outputs = self.q
         time_step = sim.GetTimeStep()
+        v0 = cur_x[0]
+        theta0 = cur_x[2]
 
-        #cur_x size is (3,1) (x, y, theta) and cur_u size is (2,1) (v, omega)
-        A = np.array([[1, 0, -cur_u[0]*time_step*np.sin(cur_x[2])],
-                      [0, 1, cur_u[0]*time_step*np.cos(cur_x[2])],
+        #cur_x size is (3,3) (x, y, theta) and cur_u size is (2,3) (v, omega)
+
+        A = np.array([[1, 0, -v0*time_step*np.sin(theta0)],
+                      [0, 1, v0*time_step*np.cos(theta0)],
                       [0, 0, 1]])
         
-        B = np.array([[time_step*np.cos(cur_x[2]), 0],
-                      [time_step*np.sin(cur_x[2]), 0],
-                      [0, time_step]])
-        
 
+        
+        B = np.array([[time_step*np.cos(theta0), 0],
+                      [time_step*np.sin(theta0), 0],
+                      [0, time_step]])
+
+
+        # linearize the system dynamics around the current state and control input
         
         # get A and B matrices by linearinzing the cotinuous system dynamics
         # The linearized continuous-time system is:
@@ -183,23 +190,73 @@ class RegulatorModel:
 
 
 
-# TODO you can change this function to allow for more passing a vector of gains
-def setCostMatrices(self,Qcoeff,Rcoeff):    
-    """
-    Get the cost matrices Q and R for the MPC controller.
+    # TODO you can change this function to allow for more passing a vector of gains
+    # def setCostMatrices(self,Qcoeff,Rcoeff):    
+    #     """
+    #     Get the cost matrices Q and R for the MPC controller.
+        
+    #     Returns:
+    #     Q: State cost matrix
+    #     R: Control input cost matrix
+    #     """
+    #     num_states = self.n
+    #     num_controls = self.m
+        
+    #     # Q = 1 * np.eye(num_states)  # State cost matrix
+    #     Q = Qcoeff * np.eye(num_states)
     
-    Returns:
-    Q: State cost matrix
-    R: Control input cost matrix
-    """
-    num_states = self.n
-    num_controls = self.m
-    
-    # Q = 1 * np.eye(num_states)  # State cost matrix
-    Q = Qcoeff * np.eye(num_states)
-   
-    
-    R = Rcoeff * np.eye(num_controls)  # Control input cost matrix
-    
-    self.Q = Q
-    self.R = R
+        
+    #     R = Rcoeff * np.eye(num_controls)  # Control input cost matrix
+        
+    #     self.Q = Q
+    #     self.R = R
+
+    def setCostMatrices(self, Qcoeff, Rcoeff):
+        """
+        Set the cost matrices Q and R for the MPC controller.
+
+        Parameters:
+        Qcoeff: float or array-like
+            State cost coefficient(s). If scalar, the same weight is applied to all states.
+            If array-like, should have a length equal to the number of states.
+
+        Rcoeff: float or array-like
+            Control input cost coefficient(s). If scalar, the same weight is applied to all control inputs.
+            If array-like, should have a length equal to the number of control inputs.
+
+        Sets:
+        self.Q: ndarray
+            State cost matrix.
+        self.R: ndarray
+            Control input cost matrix.
+        """
+        num_states = self.n
+        num_controls = self.m
+
+        # Process Qcoeff
+        if np.isscalar(Qcoeff):
+            # If Qcoeff is a scalar, create an identity matrix scaled by Qcoeff
+            Q = Qcoeff * np.eye(num_states)
+        else:
+            # Convert Qcoeff to a numpy array
+            Qcoeff = np.array(Qcoeff)
+            if Qcoeff.ndim != 1 or len(Qcoeff) != num_states:
+                raise ValueError(f"Qcoeff must be a scalar or a 1D array of length {num_states}")
+            # Create a diagonal matrix with Qcoeff as the diagonal elements
+            Q = np.diag(Qcoeff)
+
+        # Process Rcoeff
+        if np.isscalar(Rcoeff):
+            # If Rcoeff is a scalar, create an identity matrix scaled by Rcoeff
+            R = Rcoeff * np.eye(num_controls)
+        else:
+            # Convert Rcoeff to a numpy array
+            Rcoeff = np.array(Rcoeff)
+            if Rcoeff.ndim != 1 or len(Rcoeff) != num_controls:
+                raise ValueError(f"Rcoeff must be a scalar or a 1D array of length {num_controls}")
+            # Create a diagonal matrix with Rcoeff as the diagonal elements
+            R = np.diag(Rcoeff)
+
+        # Assign the matrices to the object's attributes
+        self.Q = Q
+        self.R = R
