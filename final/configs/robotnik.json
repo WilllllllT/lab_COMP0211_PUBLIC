@@ -41,14 +41,14 @@
         "noise_flag":[0],
         "robot_noise":[
                 {
-                    "joint_cov": 0.0001,
-                    "joint_vel_cov": 0.0001,
-                    "joint_acc_cov": 0.0001,
-                    "base_pos_cov": 0.0001,
-                    "base_ori_cov": 0.0001,
-                    "base_lin_vel_cov": 0.0001,
-                    "base_ang_vel_cov": 0.0001,
-                    "joint_torque_cov":0.0001
+                    "joint_cov": 0.0,
+                    "joint_vel_cov": 0.0,
+                    "joint_acc_cov": 0.0,
+                    "base_pos_cov": 1.0,
+                    "base_ori_cov": 1.0,
+                    "base_lin_vel_cov": 0.0,
+                    "base_ang_vel_cov": 0.0,
+                    "joint_torque_cov":0.0
                 }
         ]
     },

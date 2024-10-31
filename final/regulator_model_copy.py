@@ -262,3 +262,24 @@ class RegulatorModel:
         # Assign the matrices to the object's attributes
         self.Q = Q
         self.R = R
+
+    def kalman_filter_predict(self, x_est, P_est, u_mpc, process_noise_covariance):
+        x_pred = self.A @ x_est + self.B @ u_mpc
+        P_pred = self.A @ P_est @ self.A.T + process_noise_covariance
+        return x_pred, P_pred
+
+
+    def kalman_filter_update(self, x_pred, P_pred, y, landmarks, measurement_noise_covariance, base_pos):
+        # Measurement model: range from each landmark to robot
+        for i, lm in enumerate(landmarks):
+            dx = x_pred[0] - lm[0]
+            dy = x_pred[1] - lm[1]
+            dist = np.sqrt(dx**2 + dy**2)
+            self.H[i, 0] = (dx) / dist
+            self.H[i, 1] = (dy) / dist
+        S = self.H @ P_pred @ self.H.T + measurement_noise_covariance
+        K = P_pred @ self.H.T @ np.linalg.inv(S)
+        y_pred = np.array([np.sqrt((x_pred[0] - lm[0])**2 + (x_pred[1] - lm[1])**2) for lm in landmarks])
+        x_est = x_pred + K @ (y - y_pred)
+        P_est = (np.eye(len(x_pred)) - K @ self.H) @ P_pred
+        return x_est, P_est
