@@ -60,7 +60,7 @@ def quaternion2bearing(q_w, q_x, q_y, q_z):
 def init_simulator(conf_file_name):
     """Initialize simulation and dynamic model."""
     cur_dir = os.path.dirname(os.path.abspath(__file__))
-    sim = pb.SimInterface(conf_file_name, conf_file_path_ext=cur_dir, use_gui=True)
+    sim = pb.SimInterface(conf_file_name, conf_file_path_ext=cur_dir, use_gui=False)
     
     ext_names = np.expand_dims(np.array(sim.getNameActiveJoints()), axis=0)
     source_names = ["pybullet"]
@@ -212,7 +212,7 @@ def main():
 
     optimal_parameters = np.load("optimal_parameters_2.npy")
 
-    print("Optimal parameters: ", optimal_parameters[0])
+    print("Optimal parameters: ", optimal_parameters)
 
     # initializing MPC
      # Define the matrices
@@ -251,10 +251,10 @@ def main():
     
     
     # Define the cost matrices
-    Qcoeff = np.array([optimal_parameters[0], optimal_parameters[0], optimal_parameters[1]])
-    Rcoeff = np.array([optimal_parameters[2], optimal_parameters[2]])
-    # Qcoeff = np.array([378, 378, 472])
-    # Rcoeff = np.array([0.5, 0.5])
+    # Qcoeff = np.array([optimal_parameters[0], optimal_parameters[0], optimal_parameters[1]])
+    # Rcoeff = np.array([optimal_parameters[2], optimal_parameters[2]])
+    Qcoeff = np.array([378, 378, 472])
+    Rcoeff = np.array([0.5, 0.5])
     regulator.setCostMatrices(Qcoeff,Rcoeff)
    
 
