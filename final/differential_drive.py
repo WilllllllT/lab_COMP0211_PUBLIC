@@ -60,7 +60,7 @@ def quaternion2bearing(q_w, q_x, q_y, q_z):
 def init_simulator(conf_file_name):
     """Initialize simulation and dynamic model."""
     cur_dir = os.path.dirname(os.path.abspath(__file__))
-    sim = pb.SimInterface(conf_file_name, conf_file_path_ext=cur_dir, use_gui=False)
+    sim = pb.SimInterface(conf_file_name, conf_file_path_ext=cur_dir, use_gui=True)
     
     ext_names = np.expand_dims(np.array(sim.getNameActiveJoints()), axis=0)
     source_names = ["pybullet"]
@@ -200,17 +200,19 @@ def main():
     # Initialize data storage
     base_pos_all, base_bearing_all = [], []
 
-    res = gp_minimize(
-        objective_function,
-        dimensions=[(0, 400), (-500, 500), (0.5, 1.0), (0.5, 1.0), (2, 12)],
-        n_calls=500,  # Number of evaluations
-        n_random_starts=30,  # Start with 10 random evaluations
-    )
+    # res = gp_minimize(
+    #     objective_function,
+    #     dimensions=[(0, 400), (-500, 500), (0.5, 1.0), (0.5, 1.0), (2, 12)],
+    #     n_calls=500,  # Number of evaluations
+    #     n_random_starts=30,  # Start with 10 random evaluations
+    # )
 
-    optimal_parameters = res.x  # This gives [Q1, Q2, Q3, R, N]
-    all_results = res.func_vals
+    # optimal_parameters = res.x  # This gives [Q1, Q2, Q3, R, N]
+    # all_results = res.func_vals
 
-    print("Optimal parameters: ", optimal_parameters)
+    optimal_parameters = np.load("optimal_parameters_2.npy")
+
+    print("Optimal parameters: ", optimal_parameters[0])
 
     # initializing MPC
      # Define the matrices
@@ -223,7 +225,7 @@ def main():
     C = np.eye(num_states)
     
     # Horizon length
-    N_mpc = optimal_parameters[-1]
+    N_mpc = int(optimal_parameters[-1])
     # N_mpc = 9
     #[Q1, Q2, Q3, R, N]
     #[991, 36, 628, 0.7761416026955681, 12] for 500 iterations, position_cutoff = 0.5, bearing_cutoff = 0.3, angular_cutoff = 3.0
@@ -250,7 +252,7 @@ def main():
     
     # Define the cost matrices
     Qcoeff = np.array([optimal_parameters[0], optimal_parameters[0], optimal_parameters[1]])
-    Rcoeff = optimal_parameters[2]
+    Rcoeff = np.array([optimal_parameters[2], optimal_parameters[2]])
     # Qcoeff = np.array([378, 378, 472])
     # Rcoeff = np.array([0.5, 0.5])
     regulator.setCostMatrices(Qcoeff,Rcoeff)
@@ -276,8 +278,8 @@ def main():
     angular_cutoff = 2.0
 
     # Solve for the terminal cost matrix P TASK 2
-    # P = solve_discrete_are(regulator.A, regulator.B, np.diag(Qcoeff), np.diag(Rcoeff))
-    # print(P)
+    P = solve_discrete_are(regulator.A, regulator.B, np.diag(Qcoeff), np.diag(Rcoeff))
+    print(P)
 
     
     while True:
@@ -323,7 +325,7 @@ def main():
         H,F = regulator.compute_H_and_F(S_bar, T_bar, Q_bar, R_bar)
 
 
-        # H[-P.shape[0]:, -P.shape[1]:] += P
+        H[-P.shape[0]:, -P.shape[1]:] += P
 
 
         x0_mpc = np.hstack((base_pos[:2], base_bearing_))
@@ -377,27 +379,27 @@ def main():
         print(total_time_steps)
 
     # print coefficients_array
-    print("Coefficients array: ", coefficients_array)
-    print("Optimal parameters: ", optimal_parameters)
-    print("All results: ", all_results)
+    # print("Coefficients array: ", coefficients_array)
+    # print("Optimal parameters: ", optimal_parameters)
+    # print("All results: ", all_results)
 
-    # Save the coefficients array and optimal parameters
-    coefficients_array = np.array(coefficients_array)
-    np.save("coefficients_array.npy", coefficients_array)
-    np.save("optimal_parameters.npy", optimal_parameters)
-    np.save("all_results.npy", all_results)
+    # # Save the coefficients array and optimal parameters
+    # coefficients_array = np.array(coefficients_array)
+    # np.save("coefficients_array.npy", coefficients_array)
+    # np.save("optimal_parameters.npy", optimal_parameters)
+    # np.save("all_results.npy", all_results)
     
 
     #plotting
-    coefficients_array = np.array(coefficients_array)
-    plt.figure()
-    plt.plot(coefficients_array[:, -1], 'r-', label='Time Steps')
-    plt.xlabel('Iteration')
-    plt.ylabel('Time Steps')
-    plt.title('Time Steps')
-    plt.legend()
-    plt.grid()
-    plt.show()
+    # coefficients_array = np.array(coefficients_array)
+    # plt.figure()
+    # plt.plot(coefficients_array[:, -1], 'r-', label='Time Steps')
+    # plt.xlabel('Iteration')
+    # plt.ylabel('Time Steps')
+    # plt.title('Time Steps')
+    # plt.legend()
+    # plt.grid()
+    # plt.show()
 
 
     # Plotting 
