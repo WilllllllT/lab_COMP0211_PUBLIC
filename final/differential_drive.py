@@ -9,7 +9,6 @@ from regulator_model import RegulatorModel
 
 #optimisation
 from skopt import gp_minimize
-from scipy.linalg import solve_discrete_are
 
 
 
@@ -23,6 +22,8 @@ landmarks = np.array([
         ])
 
 coefficients_array = []
+simulation_run = 0
+speed = 0
 
 
 def landmark_range_observations(base_position):
@@ -60,7 +61,7 @@ def quaternion2bearing(q_w, q_x, q_y, q_z):
 def init_simulator(conf_file_name):
     """Initialize simulation and dynamic model."""
     cur_dir = os.path.dirname(os.path.abspath(__file__))
-    sim = pb.SimInterface(conf_file_name, conf_file_path_ext=cur_dir, use_gui=False)
+    sim = pb.SimInterface(conf_file_name, conf_file_path_ext=cur_dir, use_gui=True)
     
     ext_names = np.expand_dims(np.array(sim.getNameActiveJoints()), axis=0)
     source_names = ["pybullet"]
@@ -72,6 +73,7 @@ def init_simulator(conf_file_name):
 
 
 def run_simulation(Qcoeff, Rcoeff, N_mpc):
+    global simulation_run
     # Initialize simulation
     conf_file_name = "robotnik.json"
     sim, dyn_model, num_joints = init_simulator(conf_file_name)
@@ -150,13 +152,14 @@ def run_simulation(Qcoeff, Rcoeff, N_mpc):
         bearing_good = np.abs(base_bearing_) < bearing_cutoff or np.abs((3.14 - np.abs(base_bearing_)) < bearing_cutoff)
         angular_velocity_good = np.average(np.abs(angular_wheels_velocity_cmd)) < angular_cutoff
 
-        if position_good and bearing_good and angular_velocity_good:
-            print("Goal reached")
-            return total_time_steps
+        # if position_good and bearing_good and angular_velocity_good:
+        #     print("Goal reached")
+        #     return total_time_steps
 
-        if total_time_steps > 10000:
-            print("Time limit reached")
-            return 10000  # Penalize long simulations
+        if total_time_steps > 5000:
+            simulation_run += 1
+            print("\n\nSimulation run:", simulation_run, "\nbase_pos:", base_pos)
+            return base_pos  # Penalize long simulations
 
         # Update time step
         current_time += time_step
@@ -174,13 +177,19 @@ def objective_function(params):
     print("Qcoeff: ", Qcoeff)
     print("Rcoeff: ", Rcoeff)
     print("N_mpc: ", N_mpc)
-
     # Run the simulation with the provided parameters
-    step_count = run_simulation(Qcoeff, Rcoeff, N_mpc)
-    coefficients_array.append([Q2, Q2, Q3, R1, R2, N_mpc, step_count])
+    # step_count = run_simulation(Qcoeff, Rcoeff, N_mpc)
+    base_pos = run_simulation(Qcoeff, Rcoeff, N_mpc)
+    # coefficients_array.append([Q2, Q2, Q3, R1, R2, N_mpc, step_count])
+    coefficients_array.append([Q2, Q2, Q3, R1, R2, N_mpc, base_pos[0], base_pos[1]])
     
-    return step_count
+    return base_pos[0] ** 2 + base_pos[1] ** 2 + base_pos[2] # Return the square of the distance from the origin and the bearing
 
+def P_(A, B, Q, R):
+    P = np.eye(A.shape[0])
+    # for i in range(100):
+    P = Q + A.T @ P @ A - A.T @ P @ B @ np.linalg.inv(R + B.T @ P @ B) @ B.T @ P @ A
+    return P
 
 def main():
     global coefficients_array
@@ -202,15 +211,19 @@ def main():
 
     # res = gp_minimize(
     #     objective_function,
-    #     dimensions=[(0, 400), (-500, 500), (0.5, 1.0), (0.5, 1.0), (2, 12)],
-    #     n_calls=500,  # Number of evaluations
-    #     n_random_starts=30,  # Start with 10 random evaluations
+    #     dimensions=[(0, 400), (-1000,1000), (0.2, 1.0), (0.2, 1.0), (2, 12)],
+    #     n_calls=100,  # Number of evaluations
+    #     n_random_starts=10,  # Start with 10 random evaluations
     # )
 
     # optimal_parameters = res.x  # This gives [Q1, Q2, Q3, R, N]
     # all_results = res.func_vals
 
-    optimal_parameters = np.load("optimal_parameters_2.npy")
+    # np.save("optimal_parameters_distance2.npy", optimal_parameters)
+    # np.save("all_results_distance2.npy", all_results)
+
+
+    optimal_parameters = np.load("optimal_parameters_distance.npy")
 
     print("Optimal parameters: ", optimal_parameters)
 
@@ -226,7 +239,7 @@ def main():
     
     # Horizon length
     N_mpc = int(optimal_parameters[-1])
-    # N_mpc = 9
+    # N_mpc = 2
     #[Q1, Q2, Q3, R, N]
     #[991, 36, 628, 0.7761416026955681, 12] for 500 iterations, position_cutoff = 0.5, bearing_cutoff = 0.3, angular_cutoff = 3.0
     #[784, 1000, 1.0, 12] for 300 iterations, position_cutoff = 0.5, bearing_cutoff = 0.3, angular_cutoff = 2.0
@@ -251,10 +264,10 @@ def main():
     
     
     # Define the cost matrices
-    # Qcoeff = np.array([optimal_parameters[0], optimal_parameters[0], optimal_parameters[1]])
-    # Rcoeff = np.array([optimal_parameters[2], optimal_parameters[2]])
-    Qcoeff = np.array([378, 378, 472])
-    Rcoeff = np.array([0.5, 0.5])
+    Qcoeff = np.array([optimal_parameters[0], optimal_parameters[0], optimal_parameters[1]])
+    Rcoeff = np.array([optimal_parameters[2], optimal_parameters[2]])
+    # Qcoeff = np.array([378, 378, 472])
+    # Rcoeff = np.array([0.5, 0.5])
     regulator.setCostMatrices(Qcoeff,Rcoeff)
    
 
@@ -278,8 +291,7 @@ def main():
     angular_cutoff = 2.0
 
     # Solve for the terminal cost matrix P TASK 2
-    P = solve_discrete_are(regulator.A, regulator.B, np.diag(Qcoeff), np.diag(Rcoeff))
-    print(P)
+    P = P_(regulator.A, regulator.B, regulator.Q, regulator.R)
 
     
     while True:
@@ -356,7 +368,7 @@ def main():
             print("Goal reached")
             break
 
-        if total_time_steps > 10000:
+        if total_time_steps > 5000:
             print("Time limit reached")
             break
 
@@ -379,8 +391,8 @@ def main():
         print(total_time_steps)
 
     # print coefficients_array
-    # print("Coefficients array: ", coefficients_array)
-    # print("Optimal parameters: ", optimal_parameters)
+    print("Coefficients array: ", coefficients_array)
+    print("Optimal parameters: ", optimal_parameters)
     # print("All results: ", all_results)
 
     # # Save the coefficients array and optimal parameters
@@ -415,8 +427,9 @@ def main():
     plt.grid()
     plt.show()
 
+
     plt.figure()
-    plt.plot(base_bearing_all, 'r-', label='Robot Bearing')
+    plt.plot(np.arctan2(np.sin(base_bearing_all), np.cos(base_bearing_all)), 'r-', label='Robot Bearing')
     plt.xlabel('Time Step')
     plt.ylabel('Bearing [rad]')
     plt.title('Robot Bearing')
