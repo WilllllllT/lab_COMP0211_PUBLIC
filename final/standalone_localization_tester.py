@@ -165,7 +165,7 @@ for step in range(sim_config.time_steps):
 
 
     # Update the filter with the latest observations.
-    #estimator.update_from_landmark_range_observations(y_r)
+    estimator.update_from_landmark_range_observations(y_r)
     estimator.update_from_landmark_observations(y_r, y_b)
 
     # Get the current state estimate.
@@ -242,7 +242,9 @@ for s in range(3):
     if s != 2:
         plt.axhline(y=0.1, color='g', linestyle='dotted')
         plt.axhline(y=-0.1, color='g', linestyle='dotted')
-    plt.title(f"{state_name[s]}, count: {count[s]}")
+        plt.title(f"{state_name[s]}, Steps out of range: {count[s]}, Avg. \u03C3: {std_dev_position_error_cm:.2f}, No. landmarks: {len(map.landmarks)}")
+    else:
+        plt.title(f"{state_name[s]}, Steps out of range: {count[s]}, No. landmarks: {len(map.landmarks)}")
     plt.show()
 
 for s in range(3):

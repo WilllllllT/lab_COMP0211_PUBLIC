@@ -183,12 +183,12 @@ def objective_function(params):
     # coefficients_array.append([Q2, Q2, Q3, R1, R2, N_mpc, step_count])
     coefficients_array.append([Q2, Q2, Q3, R1, R2, N_mpc, base_pos[0], base_pos[1]])
     
-    return base_pos[0] ** 2 + base_pos[1] ** 2 + base_pos[2] # Return the square of the distance from the origin and the bearing
+    return base_pos[0] ** 2 + base_pos[1] ** 2 + base_pos[2] ** 2 # Return the square of the distance from the origin and the bearing
 
 def P_(A, B, Q, R):
     P = np.eye(A.shape[0])
-    # for i in range(100):
-    P = Q + A.T @ P @ A - A.T @ P @ B @ np.linalg.inv(R + B.T @ P @ B) @ B.T @ P @ A
+    for i in range(100):
+        P = Q + A.T @ P @ A - A.T @ P @ B @ np.linalg.inv(R + B.T @ P @ B) @ B.T @ P @ A
     return P
 
 def main():
@@ -238,8 +238,8 @@ def main():
     C = np.eye(num_states)
     
     # Horizon length
-    N_mpc = int(optimal_parameters[-1])
-    # N_mpc = 2
+    # N_mpc = int(optimal_parameters[-1])
+    N_mpc = 7 # optimal with P included
     #[Q1, Q2, Q3, R, N]
     #[991, 36, 628, 0.7761416026955681, 12] for 500 iterations, position_cutoff = 0.5, bearing_cutoff = 0.3, angular_cutoff = 3.0
     #[784, 1000, 1.0, 12] for 300 iterations, position_cutoff = 0.5, bearing_cutoff = 0.3, angular_cutoff = 2.0
@@ -368,7 +368,7 @@ def main():
             print("Goal reached")
             break
 
-        if total_time_steps > 5000:
+        if total_time_steps > 10000:
             print("Time limit reached")
             break
 

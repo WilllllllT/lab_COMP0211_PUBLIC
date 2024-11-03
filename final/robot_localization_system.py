@@ -19,103 +19,105 @@ class FilterConfiguration(object):
 #setting the land marks for the map
 class Map(object):
     def __init__(self):
-        # Define radii for the outer and inner circles
-        outer_radius = 35  # Radius of the outer circle
-        inner_radius = 15  # Radius of the inner circle
+        # # Define the radii and number of landmarks for each ring
+        # ring_radii = [42,32, 24, 16, 8]  # Add more radii as needed for more rings
+        # num_landmarks_per_ring = [25 ,22, 18, 10, 5]  # Number of landmarks for each ring
 
-        # Define the number of landmarks for each circle
-        num_landmarks_outer = 20  # Number of landmarks on the outer circle
-        num_landmarks_inner = 10  # Number of landmarks on the inner circle
+        # # Initialize list to hold all landmark coordinates
+        # landmarks = []
 
-        # Create outer circle landmarks
-        angles_outer = np.linspace(0, 2 * np.pi, num_landmarks_outer, endpoint=False)
-        outer_circle_landmarks = [
-            [outer_radius * np.cos(angle), outer_radius * np.sin(angle)] for angle in angles_outer
-        ]
+        # # Generate landmarks for each ring
+        # for radius, num_landmarks in zip(ring_radii, num_landmarks_per_ring):
+        #     # Create angles evenly spaced around the circle for the current ring
+        #     angles = np.linspace(0, 2 * np.pi, num_landmarks, endpoint=False)
+            
+        #     # Generate (x, y) coordinates for each landmark on the ring
+        #     ring_landmarks = [
+        #         [radius * np.cos(angle), radius * np.sin(angle)] for angle in angles
+        #     ]
+            
+        #     # Add current ring's landmarks to the full list
+        #     landmarks.extend(ring_landmarks)
 
-        # Create inner circle landmarks
-        angles_inner = np.linspace(0, 2 * np.pi, num_landmarks_inner, endpoint=False)
-        inner_circle_landmarks = [
-            [inner_radius * np.cos(angle), inner_radius * np.sin(angle)] for angle in angles_inner
-        ]
+        # # Optionally add a central landmark at [0,0]
+        # landmarks.append([0, 0])
+
+        # Convert the landmarks list to a NumPy array for consistency
+        # self.landmarks = np.array(landmarks)
+
+
+        #####################circle pattern################
+        # # Define radii for the outer and inner circles
+        # outer_radius = 35  # Radius of the outer circle
+        # inner_radius = 15  # Radius of the inner circle
+
+        # # Define the number of landmarks for each circle
+        # num_landmarks_outer = 20  # Number of landmarks on the outer circle
+        # num_landmarks_inner = 10  # Number of landmarks on the inner circle
+
+        # # Create outer circle landmarks
+        # angles_outer = np.linspace(0, 2 * np.pi, num_landmarks_outer, endpoint=False)
+        # outer_circle_landmarks = [
+        #     [outer_radius * np.cos(angle), outer_radius * np.sin(angle)] for angle in angles_outer
+        # ]
+
+        # # Create inner circle landmarks
+        # angles_inner = np.linspace(0, 2 * np.pi, num_landmarks_inner, endpoint=False)
+        # inner_circle_landmarks = [
+        #     [inner_radius * np.cos(angle), inner_radius * np.sin(angle)] for angle in angles_inner
+        # ]
 
 
 
-        # Combine the landmarks from both circles
-        self.landmarks = np.array(outer_circle_landmarks + inner_circle_landmarks + [[0,0]])
-        
-        #grid pattern
+        # # Combine the landmarks from both circles
+        # self.landmarks = np.array(outer_circle_landmarks + inner_circle_landmarks + [[0,0]])
+        ##################################################
+
+        #################grid pattern#################
         # Generate a grid of landmark coordinates from -30 to 30 with a step of 5
-        # x = np.arange(-30, 35, 5)
-        # y = np.arange(-30, 35, 5)
+        # Define denser range for border points (more frequent points along the edges)
+        
+        # Define the range and step size for the border (points along the edges only)
+        # x_border = np.concatenate((np.arange(-40, 41, 8), np.array([-40, 40])))  # x coordinates at edges and corners
+        # y_border = np.concatenate((np.arange(-40, 41, 8), np.array([-40, 40])))
 
-        # # Create a grid with all combinations of x and y
-        # xx, yy = np.meshgrid(x, y)
-        # landmarks = np.column_stack([xx.ravel(), yy.ravel()])
+        # # Define the inner grid with a smaller range
+        # x_inner = np.arange(-40, 41, 8)  # Inner grid range
+        # y_inner = np.arange(-40, 41, 8)
+
+        # # Create border points using only edge points of the defined border range
+        # xx_border = np.concatenate([np.full(len(y_border), -40), np.full(len(y_border), 40), x_border, x_border])
+        # yy_border = np.concatenate([y_border, y_border, np.full(len(x_border), -40), np.full(len(x_border), 40)])
+
+        # # Stack border coordinates
+        # landmarks_border = np.column_stack((xx_border, yy_border))
+
+        # # Create the inner grid points
+        # xx_inner, yy_inner = np.meshgrid(x_inner, y_inner)
+        # landmarks_inner = np.column_stack([xx_inner.ravel(), yy_inner.ravel()])
+
+        # # Combine border and inner grid points
+        # landmarks = np.vstack((landmarks_border, landmarks_inner))
 
         # # Set the landmarks as an attribute
         # self.landmarks = landmarks
+        ##########################################
 
+        ################Grid Pattern################
+        # Define the range for x and y coordinates
+        x_values = range(-20, 35, 5)  # from -20 to 30 in steps of 5
+        y_values = range(-10, 35, 5)  # from -10 to 30 in steps of 5
 
+        # Create a list to store the grid coordinates
+        grid_pattern = [[x, y] for x in x_values for y in y_values]
+        
+        self.landmarks = np.array(grid_pattern)
+        #########################################
+        
         # self.landmarks = np.array([
-            # [5, 5],
-            # [5, 10],
-            # [5, 15],
-            # [10, 5],
-            # [10, 10],
-            # [10, 15],
-            # [15, 5],
-            # [15, 10],
-            # [15, 15]
-
-            # confirmed works for range and bearing
-            # [-15, -15], [-15, -10], [-15, -5], [-15, 0], [-15, 5], [-15, 10], [-15, 15],
-            # [-10, -15], [-10, -10], [-10, -5], [-10, 0], [-10, 5], [-10, 10], [-10, 15],
-            # [-5, -15], [-5, -10], [-5, -5], [-5, 0], [-5, 5], [-5, 10], [-5, 15],
-            # [0, -15], [0, -10], [0, -5], [0, 0], [0, 5], [0, 10], [0, 15],
-            # [5, -15], [5, -10], [5, -5], [5, 0], [5, 5], [5, 10], [5, 15],
-            # [10, -15], [10, -10], [10, -5], [10, 0], [10, 5], [10, 10], [10, 15],
-            # [15, -15], [15, -10], [15, -5], [15, 0], [15, 5], [15, 10], [15, 15]
-            
-            
-            # [-10, -10], [-10, -5], [-10, 0], [-10, 5], [-10, 10], [-10, 15], [-10, 20], [-10, 25], [-10, 30],
-            # [-5, -10], [-5, -5], [-5, 0], [-5, 5], [-5, 10], [-5, 15], [-5, 20], [-5, 25], [-5, 30],
-            # [0, -10], [0, -5], [0, 0], [0, 5], [0, 10], [0, 15], [0, 20], [0, 25], [0, 30],
-            # [5, -10], [5, -5], [5, 0], [5, 5], [5, 10], [5, 15], [5, 20], [5, 25], [5, 30],
-            # [10, -10], [10, -5], [10, 0], [10, 5], [10, 10], [10, 15], [10, 20], [10, 25], [10, 30],
-            # [15, -10], [15, -5], [15, 0], [15, 5], [15, 10], [15, 15], [15, 20], [15, 25], [15, 30],
-            # [20, -10], [20, -5], [20, 0], [20, 5], [20, 10], [20, 15], [20, 20], [20, 25], [20, 30],
-            # [25, -10], [25, -5], [25, 0], [25, 5], [25, 10], [25, 15], [25, 20], [25, 25], [25, 30],
-            # [30, -10], [30, -5], [30, 0], [30, 5], [30, 10], [30, 15], [30, 20], [30, 25], [30, 30]
-
-            #confirmed works entierly for just range
-            # [-20, -10], [-20, -5], [-20, 0], [-20, 5], [-20, 10], [-20, 15], [-20, 20], [-20, 25], [-20, 30],
-            # [-15, -10], [-15, -5], [-15, 0], [-15, 5], [-15, 10], [-15, 15], [-15, 20], [-15, 25], [-15, 30],
-            # [-10, -10], [-10, -5], [-10, 0], [-10, 5], [-10, 10], [-10, 15], [-10, 20], [-10, 25], [-10, 30],
-            # [-5, -10], [-5, -5], [-5, 0], [-5, 5], [-5, 10], [-5, 15], [-5, 20], [-5, 25], [-5, 30],
-            # [0, -10], [0, -5], [0, 0], [0, 5], [0, 10], [0, 15], [0, 20], [0, 25], [0, 30],
-            # [5, -10], [5, -5], [5, 0], [5, 5], [5, 10], [5, 15], [5, 20], [5, 25], [5, 30],
-            # [10, -10], [10, -5], [10, 0], [10, 5], [10, 10], [10, 15], [10, 20], [10, 25], [10, 30],
-            # [15, -10], [15, -5], [15, 0], [15, 5], [15, 10], [15, 15], [15, 20], [15, 25], [15, 30],
-            # [20, -10], [20, -5], [20, 0], [20, 5], [20, 10], [20, 15], [20, 20], [20, 25], [20, 30],
-            # [25, -10], [25, -5], [25, 0], [25, 5], [25, 10], [25, 15], [25, 20], [25, 25], [25, 30],
-            # [30, -10], [30, -5], [30, 0], [30, 5], [30, 10], [30, 15], [30, 20], [30, 25], [30, 30]
-
-            # [-20, -10], [-20, -5], [-20, 0], [-20, 5], [-20, 10], [-20, 15], [-20, 20], [-20, 25], [-20, 30],
-            # [-10, -10], [-10, 0], [-10, 5], [-10, 10], [-10, 15], [-10, 20], [-10, 30],
-            # [-5, -10], [-5, 0], [-5, 5], [-5, 10], [-5, 15], [-5, 20], [-5, 30],
-            # [0, -10], [0, 0], [0, 5], [0, 10], [0, 15], [0, 20], [0, 30],
-            # [5, -10], [5, 0], [5, 5], [5, 10], [5, 15], [5, 20], [5, 30],
-            # [10, -10], [10, 0], [10, 5], [10, 10], [10, 15], [10, 20], [10, 30],
-            # [15, -10], [15, 0], [15, 5], [15, 10], [15, 15], [15, 20], [15, 30],
-            # [20, -10], [20, 0], [20, 5], [20, 10], [20, 15], [20, 20], [20, 30],
-            # [30, -10], [30, -5], [30, 0], [30, 5], [30, 10], [30, 15], [30, 20], [30, 25], [30, 30]
-
-
-
-            # [5, 10],
-            # [15, 5],
-            # [10, 15]
+        #     [5, 10],
+        #     [15, 5],
+        #     [10, 15]
         # ])
 
 
@@ -295,18 +297,18 @@ class RobotEstimator(object):
         # Convert lists to arrays
         C_r = np.array(C_r)
         C_b = np.array(C_b)
-        C = np.vstack((C_r, C_b))
+        C = np.vstack((C_r, C_b)) #matrix of size 2n x 3
 
-        y_pred_r = np.array(y_pred_r)
+        y_pred_r = np.array(y_pred_r) # size n x 1
         y_pred_b = np.array(y_pred_b)
 
         # Innovation. Look new information! (geddit?)
         nu_r = y_range - y_pred_r
-        nu_b = y_bearing - y_pred_b
+        nu_b = y_bearing - y_pred_b 
 
         #wrapping the bearing error
         nu_b = np.arctan2(np.sin(nu_b), np.cos(nu_b))
-        nu = np.hstack((nu_r, nu_b))
+        nu = np.hstack((nu_r, nu_b)) #matrix of size 2n x 1
         
 
         # Since we are oberving a bunch of landmarks
@@ -321,9 +323,13 @@ class RobotEstimator(object):
         W = np.block([
             [W_landmarks_r, np.zeros_like(W_landmarks_r)],
             [np.zeros_like(W_landmarks_b), W_landmarks_b]
-        ])
+        ]) #matrix of size 2n x 2n
 
         self._do_kf_update(nu, C, W)
+
+        print("size of nu: ", nu.shape)
+        print("size of C: ", C.shape)
+        print("size of W: ", W.shape)
 
 
         # Angle wrap afterwards
