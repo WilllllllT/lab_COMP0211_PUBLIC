@@ -42,15 +42,17 @@ def landmark_range_observations(base_position, W_range):
     y = np.array(y)
     return y
 
-def landmark_range_bearing(base_position, base_orientation):
-    observations = []
-    for landmark in landmarks:
-        dx = landmark[0] - base_position[0]
-        dy = landmark[1] - base_position[1]
-        range_meas = np.sqrt(dx**2 + dy**2)
-        bearing_meas = wrap_angle(np.arctan2(dy, dx) - base_orientation) + np.random.normal(0, np.sqrt(W_bearing))
-        observations.append((range_meas, bearing_meas))
-    return observations
+def landmark_bearing_observations(base_position, base_bearing):
+    y = []
+    for lm in landmarks:
+        dx = lm[0] - base_position[0]
+        dy = lm[1] - base_position[1]
+        bearing_true = np.arctan2(dy, dx) - base_bearing
+        bearing_meas = bearing_true + np.random.normal(0, np.sqrt(W_bearing))
+        # 将角度限制在 [-π, π]
+        bearing_meas = np.arctan2(np.sin(bearing_meas), np.cos(bearing_meas))
+        y.append(bearing_meas)
+    return np.array(y)
 
 
 def quaternion2bearing(q_w, q_x, q_y, q_z):
@@ -198,6 +200,7 @@ def objective_function(params):
 
 def main():
     global coefficients_array
+
     # Configuration for the simulation
     conf_file_name = "robotnik.json"  # Configuration file for the robot
     sim,dyn_model,num_joints=init_simulator(conf_file_name)
@@ -256,7 +259,7 @@ def main():
     
     # Set the cost matrices
     base_pos_all, base_bearing_all = [], []
-    x_true_history, x_est_history = [], []
+    true_positions, estimated_positions = [], []
     
     # Define the cost matrices
     Qcoeff = np.array([optimal_parameters[0], optimal_parameters[0], optimal_parameters[1]])
@@ -268,18 +271,21 @@ def main():
 
     u_mpc = np.zeros(num_controls)
 
-    true_positions = []
-    estimated_positions = []
-    position_errors = []
-    bearing_errors = []
+    # Initialize the EKF
+    filter_config = FilterConfiguration()
+    map = Map()
+    estimator = RobotEstimator(filter_config, map)
+    estimator.start()
+
+
+    position_errors, bearing_errors, true_positions, estimated_positions = [], [], [] ,[]
+    
 
     # ##### robot parameters ########
     wheel_radius = 0.11
     wheel_base_width = 0.46
   
     ##### MPC control action #######
-    v_linear = 0.0
-    v_angular = 0.0
     cmd = MotorCommands()  # Initialize command structure for motors
     init_angular_wheels_velocity_cmd = np.array([0.0, 0.0, 0.0, 0.0])
     init_interface_all_wheels = ["velocity", "velocity", "velocity", "velocity"]
@@ -290,16 +296,11 @@ def main():
     bearing_cutoff = 0.3
     angular_cutoff = 2.0
 
-    for N in range(1, 4):
-        N_mpc = N
     while True:
         # True state propagation (with process noise)
         # ##### advance simulation ##################################################################
         sim.Step(cmd, "torque")
         time_step = sim.GetTimeStep()
-
-        # Kalman filter prediction
-    
     
         # Get the measurements from the simulator ###########################################
         #  # measurements of the robot without noise (just for comparison purpose) #############
@@ -313,14 +314,29 @@ def main():
         base_ori = sim.GetBaseOrientation()
         base_bearing_ = quaternion2bearing(base_ori[3], base_ori[0], base_ori[1], base_ori[2])
 
+        # Range and bearing observations
+        y_range = landmark_range_observations(base_pos_no_noise, W_range)
+        y_bearing = landmark_bearing_observations(base_pos, base_bearing_)
+
+        # EKF 预测和更新
+        estimator.set_control_input(u_mpc)
+        estimator.predict_to(current_time)
+        estimator.update_from_landmark_observations(y_range, y_bearing)
+
+        # 获取当前状态估计
+        x_est, Sigma_est = estimator.estimate()
+
+        # Store true and estimated positions
+        true_positions.append(base_pos_no_noise[:2]) 
+        estimated_positions.append(x_est[:2]) 
     
 
         # Compute the matrices needed for MPC optimization
-        # cur_state_x_for_linearization = [0,0,0]
-        # cur_u_for_linearization = [0,0]
-        cur_state_x_for_linearization = [base_pos[0], base_pos[1], base_bearing_]
-        cur_u_for_linearization = u_mpc
-        regulator.updateSystemMatrices(sim,cur_state_x_for_linearization,cur_u_for_linearization)
+        cur_state_x_for_linearization = [x_est[0], x_est[1], x_est[2]]
+        regulator.updateSystemMatrices(sim, x_est, u_mpc)
+        # cur_state_x_for_linearization = [base_pos[0], base_pos[1], base_bearing_]
+        # cur_u_for_linearization = u_mpc
+        # regulator.updateSystemMatrices(sim,cur_state_x_for_linearization,cur_u_for_linearization)
 
         # regulator.updateSystemMatrices(sim, x_estimated_for_mpc, u_mpc)
 
@@ -337,7 +353,9 @@ def main():
         x0_mpc = x0_mpc.flatten()
         # Compute the optimal control sequence
         H_inv = np.linalg.inv(H)
-        u_mpc = -H_inv @ F @ x0_mpc
+        # u_mpc = -H_inv @ F @ x0_mpc # without EKF
+
+        u_mpc = -H_inv @ F @ x_est # with EKF
         # Return the optimal control sequence
         u_mpc = u_mpc[0:num_controls] 
         # Prepare control command to send to the low level controller
@@ -346,11 +364,8 @@ def main():
         interface_all_wheels = ["velocity", "velocity", "velocity", "velocity"]
         cmd.SetControlCmd(angular_wheels_velocity_cmd, interface_all_wheels)
 
-        print("u_mpc",np.abs(u_mpc))
-        print("base_pos",base_pos)
-        print("base_bearing_",base_bearing_)
-        print("angular_wheels_velocity_cmd",angular_wheels_velocity_cmd)
 
+        sim.Step(cmd, "torque")
         ## Check if the goal is reached ##
 
         # position_good = True if np.abs(base_pos[0]) < pos_cutoff and np.abs(base_pos[1]) < pos_cutoff else False
@@ -375,8 +390,8 @@ def main():
         
 
         # # Store data for plotting if necessary
-        base_pos_all.append(base_pos_no_noise)
-        base_bearing_all.append(base_bearing_no_noise_ - 3.14)
+        base_pos_all.append(base_pos)
+        base_bearing_all.append(base_bearing_ - 3.14)
         # x_true_history.append([base_pos[0], base_pos[1], base_bearing_])
         # x_est_history.append(ekf.x)
         position_errors.append(np.sqrt((base_pos[0]) ** 2 + (base_pos[1]) ** 2))
@@ -387,6 +402,26 @@ def main():
         total_time_steps += 1
 
         print(total_time_steps)
+
+    ############ EKF PLOTTING ################
+    true_positions = np.array(true_positions)
+    estimated_positions = np.array(estimated_positions)
+
+    # 绘制真实轨迹和估计轨迹的对比图
+    plt.figure()
+    plt.plot(true_positions[:, 0], true_positions[:, 1], label='True Trajectory', color='blue')
+    plt.plot(estimated_positions[:, 0], estimated_positions[:, 1], label='Estimated Trajectory', color='orange', linestyle='--')
+    plt.xlabel('X Position')
+    plt.ylabel('Y Position')
+    plt.title(f'Robot Trajectory Comparison (Total Time: {current_time})')
+    plt.legend()
+    plt.show()
+
+    # 打印初始位置和状态信息
+    print("Initial Base Position:", sim.GetBasePosition())
+    print("Initial Base Orientation:", sim.GetBaseOrientation())
+    print(f"Final Base Position: {base_pos}, Bearing: {base_bearing_}, u_mpc: {u_mpc}")
+    ############################################
 
     # print coefficients_array
     print("Coefficients array: ", coefficients_array)

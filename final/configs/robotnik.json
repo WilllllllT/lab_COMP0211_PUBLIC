@@ -38,7 +38,7 @@
         "servo_vel_gains": [3],
         "delay_measure_flag":[0],
         "delay_measure_steps":[3],
-        "noise_flag":[0],
+        "noise_flag":[1],
         "robot_noise":[
                 {
                     "joint_cov": 0.0,
