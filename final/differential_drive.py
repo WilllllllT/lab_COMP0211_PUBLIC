@@ -289,7 +289,7 @@ def main():
     
     # Horizon length
     N_mpc = int(optimal_parameters[-1])
-    # N_mpc = 20 # optimal with P included
+    # N_mpc = 10 # optimal with P included
     #[Q1, Q2, Q3, R, N]
     #[991, 36, 628, 0.7761416026955681, 12] for 500 iterations, position_cutoff = 0.5, bearing_cutoff = 0.3, angular_cutoff = 3.0
     #[784, 1000, 1.0, 12] for 300 iterations, position_cutoff = 0.5, bearing_cutoff = 0.3, angular_cutoff = 2.0
@@ -325,7 +325,7 @@ def main():
     # Define the cost matrices
     Qcoeff = np.array([optimal_parameters[0], optimal_parameters[0], optimal_parameters[1]])
     Rcoeff = np.array([optimal_parameters[2], optimal_parameters[2]])
-    # Qcoeff = np.array([550, 450, 85])
+    # Qcoeff = np.array([310, 310, 80.0])
     # Rcoeff = np.array([0.5, 0.5])
     regulator.setCostMatrices(Qcoeff,Rcoeff)
    
@@ -399,15 +399,17 @@ def main():
         # Compute the matrices needed for MPC optimization
         # TODO here you want to update the matrices A and B at each time step if you want to linearize around the current points
         # add this 3 lines if you want to update the A and B matrices at each time step 
-        cur_state_x_for_linearization = [base_pos[0], base_pos[1], base_bearing_]
-        cur_u_for_linearization = u_mpc
+        # cur_state_x_for_linearization = [base_pos[0], base_pos[1], base_bearing_]
+        # cur_u_for_linearization = u_mpc
+        cur_state_x_for_linearization = [0,0,0]
+        cur_u_for_linearization = [0,0]
         regulator.updateSystemMatrices(sim,cur_state_x_for_linearization,cur_u_for_linearization)
 
         # regulator.updateSystemMatrices(sim, x_estimated_for_mpc, u_mpc)
 
         #find P matrix
-        # P = P_(regulator.A, regulator.B, regulator.Q, regulator.R)
-        P = solve_discrete_are(regulator.A, regulator.B, regulator.Q, regulator.R)
+        # P = solve_discrete_are(regulator.A, regulator.B, regulator.Q, regulator.R)
+        P = None
         print("P matrix:", P)
 
         S_bar, T_bar, Q_bar, R_bar = regulator.propagation_model_regulator_fixed_std(P)

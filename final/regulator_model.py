@@ -361,7 +361,7 @@ class RegulatorModel:
             [0, time_step]
         ])
 
-        A = A + 1e-3 * np.eye(num_states)
+        # A = A + 1e-3 * np.eye(num_states)
 
         # updating the state and control input matrices
         self.A = A
