@@ -196,52 +196,6 @@ def objective_function(params):
     
     return base_pos[0] ** 2 + base_pos[1] ** 2 + base_pos[2] ** 2 # Return the square of the distance from the origin and the bearing
 
-
-class EKF:
-    def __init__(self, initial_state, initial_covariance, process_noise, measurement_noise):
-        self.x = initial_state  # State estimate
-        self.P = initial_covariance  # State covariance
-        self.Q = process_noise  # Process noise covariance
-        self.R = measurement_noise  # Measurement noise covariance
-
-    def predict(self, control_input, A, B):
-        # Prediction Step
-        self.x = A @ self.x + B @ control_input  # Predicted state
-        self.P = A @ self.P @ A.T + self.Q  # Predicted covariance
-
-    def update(self, measurement, H, landmark_position):
-        # Calculate expected range and bearing to the landmark
-        dx = landmark_position[0] - self.x[0]
-        dy = landmark_position[1] - self.x[1]
-        expected_range = np.sqrt(dx**2 + dy**2)
-        expected_bearing = wrap_angle(np.arctan2(dy, dx) - self.x[2])
-
-        # Measurement residual (innovation)
-        y = measurement - np.array([expected_range, expected_bearing])
-        y[1] = wrap_angle(y[1])  # Ensure angle is within [-pi, pi]
-
-        # Update Jacobian H with partial derivatives for range and bearing
-        H[0, 0] = -dx / expected_range
-        H[0, 1] = -dy / expected_range
-        H[1, 0] = dy / (dx**2 + dy**2)
-        H[1, 1] = -dx / (dx**2 + dy**2)
-
-        # Calculate Kalman gain
-        S = H @ self.P @ H.T + self.R
-        K = self.P @ H.T @ np.linalg.inv(S)
-
-        # State update
-        self.x += K @ y
-
-        # More stable covariance update formula
-        self.P = (np.eye(len(self.x)) - K @ H) @ self.P @ (np.eye(len(self.x)) - K @ H).T + K @ self.R @ K.T
-
-def P_(A, B, Q, R):
-    P = np.eye(A.shape[0])
-    for i in range(100):
-        P = Q + A.T @ P @ A - A.T @ P @ B @ np.linalg.inv(R + B.T @ P @ B) @ B.T @ P @ A
-    return P
-
 def main():
     global coefficients_array
     # Configuration for the simulation
@@ -257,7 +211,7 @@ def main():
     current_time = 0
     total_time_steps = 0
    
-    
+    ## run the bayes optimisation ##
 
     # res = gp_minimize(
     #     objective_function,
@@ -273,12 +227,11 @@ def main():
     # np.save("all_results_distance2.npy", all_results)
 
 
-    optimal_parameters = np.load("optimal_parameters_distance.npy")
+    optimal_parameters = np.load('Saved_np\optimal_parameters_distance.npy')
 
     print("Optimal parameters: ", optimal_parameters)
 
     # initializing MPC
-     # Define the matrices
     num_states = 3
     num_controls = 2
    
@@ -288,23 +241,12 @@ def main():
     C = np.eye(num_states)
     
     # Horizon length
-    N_mpc = int(optimal_parameters[-1])
-    # N_mpc = 10 # optimal with P included
-    #[Q1, Q2, Q3, R, N]
-    #[991, 36, 628, 0.7761416026955681, 12] for 500 iterations, position_cutoff = 0.5, bearing_cutoff = 0.3, angular_cutoff = 3.0
-    #[784, 1000, 1.0, 12] for 300 iterations, position_cutoff = 0.5, bearing_cutoff = 0.3, angular_cutoff = 2.0
-    #[378, 378, 472, 0.5, 9] for 300 iterations, position_cutoff = 0.5, bearing_cutoff = 0.3, angular_cutoff = 2.0 (state space change to 400, 400, 500)
+    # N_mpc = int(optimal_parameters[-1])
+    N_mpc = 4 # optimal with P included
 
-    #[Q1, Q2, Q3, R1, R2, N]
 
     # Initialize the regulator model
     regulator = RegulatorModel(N_mpc, num_states, num_controls, num_states)
-    # # update A,B,C matrices
-    # # TODO provide state_x_for_linearization,cur_u_for_linearization to linearize the system
-    # # you can linearize around the final state and control of the robot (everything zero)
-    # # or you can linearize around the current state and control of the robot
-    # # in the second case case you need to update the matrices A and B at each time step
-    # # and recall everytime the method updateSystemMatrices
     init_pos  = np.array([2.0, 3.0, 0.0])
     init_quat = np.array([0,0,0.3827,0.9239])
     init_base_bearing_ = quaternion2bearing(init_quat[3], init_quat[0], init_quat[1], init_quat[2])
@@ -312,13 +254,7 @@ def main():
     cur_u_for_linearization = np.zeros(num_controls)
     regulator.updateSystemMatrices(sim,cur_state_x_for_linearization,cur_u_for_linearization)
     
-    # Initialize data storage
-    # EKF Initialization
-    # initial_covariance = np.eye(3)
-    # process_noise = np.diag([0.02, 0.02, 0.02])
-    # measurement_noise = np.diag([0.3, 0.3])
-
-    # ekf = EKF(init_pos, initial_covariance, process_noise, measurement_noise)
+    # Set the cost matrices
     base_pos_all, base_bearing_all = [], []
     x_true_history, x_est_history = [], []
     
@@ -354,7 +290,8 @@ def main():
     bearing_cutoff = 0.3
     angular_cutoff = 2.0
 
-    
+    for N in range(1, 4):
+        N_mpc = N
     while True:
         # True state propagation (with process noise)
         # ##### advance simulation ##################################################################
@@ -362,7 +299,7 @@ def main():
         time_step = sim.GetTimeStep()
 
         # Kalman filter prediction
-       
+    
     
         # Get the measurements from the simulator ###########################################
         #  # measurements of the robot without noise (just for comparison purpose) #############
@@ -376,44 +313,25 @@ def main():
         base_ori = sim.GetBaseOrientation()
         base_bearing_ = quaternion2bearing(base_ori[3], base_ori[0], base_ori[1], base_ori[2])
 
-        # measurements = landmark_range_observations(base_pos_no_noise,W_range)
-
     
-        # # EKF Prediction
-        # ekf.predict(u_mpc, regulator.A, regulator.B)
 
-        # # EKF Update using landmarks
-        # # measurements = landmark_range_bearing(base_pos, base_bearing_)
-        # for idx, landmark in enumerate(landmarks):
-        #     H = np.zeros((2, 3))
-        #     measurement = np.array(measurements[idx])
-        #     ekf.update(measurement, H, landmark)
-
-        # # Use EKF estimated state for control
-        # x_estimated_for_mpc = ekf.x
-
-        # Figure out what the controller should do next
-        # MPC section/ low level controller section ##################################################################
-       
-   
         # Compute the matrices needed for MPC optimization
-        # TODO here you want to update the matrices A and B at each time step if you want to linearize around the current points
-        # add this 3 lines if you want to update the A and B matrices at each time step 
-        # cur_state_x_for_linearization = [base_pos[0], base_pos[1], base_bearing_]
-        # cur_u_for_linearization = u_mpc
-        cur_state_x_for_linearization = [0,0,0]
-        cur_u_for_linearization = [0,0]
+        # cur_state_x_for_linearization = [0,0,0]
+        # cur_u_for_linearization = [0,0]
+        cur_state_x_for_linearization = [base_pos[0], base_pos[1], base_bearing_]
+        cur_u_for_linearization = u_mpc
         regulator.updateSystemMatrices(sim,cur_state_x_for_linearization,cur_u_for_linearization)
 
         # regulator.updateSystemMatrices(sim, x_estimated_for_mpc, u_mpc)
 
         #find P matrix
-        # P = solve_discrete_are(regulator.A, regulator.B, regulator.Q, regulator.R)
-        P = None
+
+        P = solve_discrete_are(regulator.A - 0.05*np.eye(num_states), regulator.B, regulator.Q, regulator.R)
+        # P = None
         print("P matrix:", P)
 
         S_bar, T_bar, Q_bar, R_bar = regulator.propagation_model_regulator_fixed_std(P)
-        H,F = regulator.compute_H_and_F(S_bar, T_bar, Q_bar, R_bar, P)
+        H,F = regulator.compute_H_and_F(S_bar, T_bar, Q_bar, R_bar)
         
         x0_mpc = np.hstack((base_pos[:2], base_bearing_))
         x0_mpc = x0_mpc.flatten()
@@ -484,6 +402,8 @@ def main():
     # np.save("coefficients_array.npy", coefficients_array)
     # np.save("optimal_parameters.npy", optimal_parameters)
     # np.save("all_results.npy", all_results)
+
+    # plot base_pos_all
     
 
     #plotting

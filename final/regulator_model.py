@@ -13,7 +13,7 @@ class RegulatorModel:
         self.m = m  # input dimension 4
         self.n = n  # state dimension 3
 
-    def compute_H_and_F(self, S_bar, T_bar, Q_bar, R_bar, P):
+    def compute_H_and_F(self, S_bar, T_bar, Q_bar, R_bar):
         # Compute H
         H = np.dot(S_bar.T, np.dot(Q_bar, S_bar)) + R_bar
         F = np.dot(S_bar.T, np.dot(Q_bar, T_bar))
