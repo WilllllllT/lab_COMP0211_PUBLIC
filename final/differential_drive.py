@@ -9,24 +9,25 @@ from regulator_model import RegulatorModel
 
 #optimisation
 from skopt import gp_minimize
+from scipy.linalg import solve_discrete_are
 
+#EKF
+from robot_localization_system import FilterConfiguration, Map, RobotEstimator
 
+map = Map()
+landmarks = map.landmarks  
 
+# gloabl variables
+W_range = 0.5 ** 2  
+W_bearing = (np.pi * 0.5 / 180.0) ** 2 
 
-# global variables
-W_range = 0.5 ** 2  # Measurement noise variance (range measurements)
-landmarks = np.array([
-            [5, 10],
-            [15, 5],
-            [10, 15]
-        ])
 
 coefficients_array = []
 simulation_run = 0
 speed = 0
 
 
-def landmark_range_observations(base_position):
+def landmark_range_observations(base_position, W_range):
     y = []
     C = []
     W = W_range
@@ -34,12 +35,22 @@ def landmark_range_observations(base_position):
         # True range measurement (with noise)
         dx = lm[0] - base_position[0]
         dy = lm[1] - base_position[1]
-        range_meas = np.sqrt(dx**2 + dy**2)
+        range_meas = np.sqrt(dx**2 + dy**2) + np.random.normal(0, np.sqrt(W_range))
        
         y.append(range_meas)
 
     y = np.array(y)
     return y
+
+def landmark_range_bearing(base_position, base_orientation):
+    observations = []
+    for landmark in landmarks:
+        dx = landmark[0] - base_position[0]
+        dy = landmark[1] - base_position[1]
+        range_meas = np.sqrt(dx**2 + dy**2)
+        bearing_meas = wrap_angle(np.arctan2(dy, dx) - base_orientation) + np.random.normal(0, np.sqrt(W_bearing))
+        observations.append((range_meas, bearing_meas))
+    return observations
 
 
 def quaternion2bearing(q_w, q_x, q_y, q_z):
@@ -185,6 +196,46 @@ def objective_function(params):
     
     return base_pos[0] ** 2 + base_pos[1] ** 2 + base_pos[2] ** 2 # Return the square of the distance from the origin and the bearing
 
+
+class EKF:
+    def __init__(self, initial_state, initial_covariance, process_noise, measurement_noise):
+        self.x = initial_state  # State estimate
+        self.P = initial_covariance  # State covariance
+        self.Q = process_noise  # Process noise covariance
+        self.R = measurement_noise  # Measurement noise covariance
+
+    def predict(self, control_input, A, B):
+        # Prediction Step
+        self.x = A @ self.x + B @ control_input  # Predicted state
+        self.P = A @ self.P @ A.T + self.Q  # Predicted covariance
+
+    def update(self, measurement, H, landmark_position):
+        # Calculate expected range and bearing to the landmark
+        dx = landmark_position[0] - self.x[0]
+        dy = landmark_position[1] - self.x[1]
+        expected_range = np.sqrt(dx**2 + dy**2)
+        expected_bearing = wrap_angle(np.arctan2(dy, dx) - self.x[2])
+
+        # Measurement residual (innovation)
+        y = measurement - np.array([expected_range, expected_bearing])
+        y[1] = wrap_angle(y[1])  # Ensure angle is within [-pi, pi]
+
+        # Update Jacobian H with partial derivatives for range and bearing
+        H[0, 0] = -dx / expected_range
+        H[0, 1] = -dy / expected_range
+        H[1, 0] = dy / (dx**2 + dy**2)
+        H[1, 1] = -dx / (dx**2 + dy**2)
+
+        # Calculate Kalman gain
+        S = H @ self.P @ H.T + self.R
+        K = self.P @ H.T @ np.linalg.inv(S)
+
+        # State update
+        self.x += K @ y
+
+        # More stable covariance update formula
+        self.P = (np.eye(len(self.x)) - K @ H) @ self.P @ (np.eye(len(self.x)) - K @ H).T + K @ self.R @ K.T
+
 def P_(A, B, Q, R):
     P = np.eye(A.shape[0])
     for i in range(100):
@@ -206,8 +257,7 @@ def main():
     current_time = 0
     total_time_steps = 0
    
-    # Initialize data storage
-    base_pos_all, base_bearing_all = [], []
+    
 
     # res = gp_minimize(
     #     objective_function,
@@ -238,8 +288,8 @@ def main():
     C = np.eye(num_states)
     
     # Horizon length
-    # N_mpc = int(optimal_parameters[-1])
-    N_mpc = 7 # optimal with P included
+    N_mpc = int(optimal_parameters[-1])
+    # N_mpc = 20 # optimal with P included
     #[Q1, Q2, Q3, R, N]
     #[991, 36, 628, 0.7761416026955681, 12] for 500 iterations, position_cutoff = 0.5, bearing_cutoff = 0.3, angular_cutoff = 3.0
     #[784, 1000, 1.0, 12] for 300 iterations, position_cutoff = 0.5, bearing_cutoff = 0.3, angular_cutoff = 2.0
@@ -255,23 +305,37 @@ def main():
     # # or you can linearize around the current state and control of the robot
     # # in the second case case you need to update the matrices A and B at each time step
     # # and recall everytime the method updateSystemMatrices
-    init_pos  = np.array([2.0, 3.0])
+    init_pos  = np.array([2.0, 3.0, 0.0])
     init_quat = np.array([0,0,0.3827,0.9239])
     init_base_bearing_ = quaternion2bearing(init_quat[3], init_quat[0], init_quat[1], init_quat[2])
     cur_state_x_for_linearization = [init_pos[0], init_pos[1], init_base_bearing_]
     cur_u_for_linearization = np.zeros(num_controls)
     regulator.updateSystemMatrices(sim,cur_state_x_for_linearization,cur_u_for_linearization)
     
+    # Initialize data storage
+    # EKF Initialization
+    # initial_covariance = np.eye(3)
+    # process_noise = np.diag([0.02, 0.02, 0.02])
+    # measurement_noise = np.diag([0.3, 0.3])
+
+    # ekf = EKF(init_pos, initial_covariance, process_noise, measurement_noise)
+    base_pos_all, base_bearing_all = [], []
+    x_true_history, x_est_history = [], []
     
     # Define the cost matrices
     Qcoeff = np.array([optimal_parameters[0], optimal_parameters[0], optimal_parameters[1]])
     Rcoeff = np.array([optimal_parameters[2], optimal_parameters[2]])
-    # Qcoeff = np.array([378, 378, 472])
+    # Qcoeff = np.array([550, 450, 85])
     # Rcoeff = np.array([0.5, 0.5])
     regulator.setCostMatrices(Qcoeff,Rcoeff)
    
 
     u_mpc = np.zeros(num_controls)
+
+    true_positions = []
+    estimated_positions = []
+    position_errors = []
+    bearing_errors = []
 
     # ##### robot parameters ########
     wheel_radius = 0.11
@@ -289,9 +353,6 @@ def main():
     pos_cutoff = 0.5
     bearing_cutoff = 0.3
     angular_cutoff = 2.0
-
-    # Solve for the terminal cost matrix P TASK 2
-    P = P_(regulator.A, regulator.B, regulator.Q, regulator.R)
 
     
     while True:
@@ -314,14 +375,22 @@ def main():
         base_pos = sim.GetBasePosition()
         base_ori = sim.GetBaseOrientation()
         base_bearing_ = quaternion2bearing(base_ori[3], base_ori[0], base_ori[1], base_ori[2])
-        y = landmark_range_observations(base_pos)
+
+        # measurements = landmark_range_observations(base_pos_no_noise,W_range)
 
     
-        # Update the filter with the latest observations
-        
-    
-        # Get the current state estimate
-        
+        # # EKF Prediction
+        # ekf.predict(u_mpc, regulator.A, regulator.B)
+
+        # # EKF Update using landmarks
+        # # measurements = landmark_range_bearing(base_pos, base_bearing_)
+        # for idx, landmark in enumerate(landmarks):
+        #     H = np.zeros((2, 3))
+        #     measurement = np.array(measurements[idx])
+        #     ekf.update(measurement, H, landmark)
+
+        # # Use EKF estimated state for control
+        # x_estimated_for_mpc = ekf.x
 
         # Figure out what the controller should do next
         # MPC section/ low level controller section ##################################################################
@@ -333,13 +402,17 @@ def main():
         cur_state_x_for_linearization = [base_pos[0], base_pos[1], base_bearing_]
         cur_u_for_linearization = u_mpc
         regulator.updateSystemMatrices(sim,cur_state_x_for_linearization,cur_u_for_linearization)
-        S_bar, T_bar, Q_bar, R_bar = regulator.propagation_model_regulator_fixed_std()
-        H,F = regulator.compute_H_and_F(S_bar, T_bar, Q_bar, R_bar)
 
+        # regulator.updateSystemMatrices(sim, x_estimated_for_mpc, u_mpc)
 
-        H[-P.shape[0]:, -P.shape[1]:] += P
+        #find P matrix
+        # P = P_(regulator.A, regulator.B, regulator.Q, regulator.R)
+        P = solve_discrete_are(regulator.A, regulator.B, regulator.Q, regulator.R)
+        print("P matrix:", P)
 
-
+        S_bar, T_bar, Q_bar, R_bar = regulator.propagation_model_regulator_fixed_std(P)
+        H,F = regulator.compute_H_and_F(S_bar, T_bar, Q_bar, R_bar, P)
+        
         x0_mpc = np.hstack((base_pos[:2], base_bearing_))
         x0_mpc = x0_mpc.flatten()
         # Compute the optimal control sequence
@@ -358,15 +431,14 @@ def main():
         print("base_bearing_",base_bearing_)
         print("angular_wheels_velocity_cmd",angular_wheels_velocity_cmd)
 
-        position_good = True if np.abs(base_pos[0]) < pos_cutoff and np.abs(base_pos[1]) < pos_cutoff else False
-        bearing_good = True if np.abs(base_bearing_) < bearing_cutoff or np.abs((3.14 - np.abs(base_bearing_)) < bearing_cutoff) else False
-        # velocity_good = True if (np.abs(16 - u_mpc[0]) < velocity_cutoff and np.abs(u_mpc[1]) < velocity_cutoff) or (np.abs(u_mpc[0]) < velocity_cutoff and np.abs(16 - u_mpc[1]) < velocity_cutoff) else False
-        angular_velocity_good = True if np.average(np.abs(angular_wheels_velocity_cmd)) < angular_cutoff else False
+        # position_good = True if np.abs(base_pos[0]) < pos_cutoff and np.abs(base_pos[1]) < pos_cutoff else False
+        # bearing_good = True if np.abs(base_bearing_) < bearing_cutoff or np.abs((3.14 - np.abs(base_bearing_)) < bearing_cutoff) else False
+        # angular_velocity_good = True if np.average(np.abs(angular_wheels_velocity_cmd)) < angular_cutoff else False
 
         #condition for robot reaching the goal
-        if position_good and bearing_good and angular_velocity_good:
-            print("Goal reached")
-            break
+        # if position_good and bearing_good and angular_velocity_good:
+        #     print("Goal reached")
+        #     break
 
         if total_time_steps > 10000:
             print("Time limit reached")
@@ -381,8 +453,12 @@ def main():
         
 
         # # Store data for plotting if necessary
-        base_pos_all.append(base_pos)
-        base_bearing_all.append(np.arctan2(np.sin(base_bearing_), np.cos(base_bearing_)))
+        base_pos_all.append(base_pos_no_noise)
+        base_bearing_all.append(base_bearing_no_noise_ - 3.14)
+        # x_true_history.append([base_pos[0], base_pos[1], base_bearing_])
+        # x_est_history.append(ekf.x)
+        position_errors.append(np.sqrt((base_pos[0]) ** 2 + (base_pos[1]) ** 2))
+        bearing_errors.append(np.abs(base_bearing_))
 
         # # Update current time
         current_time += time_step
@@ -394,6 +470,10 @@ def main():
     print("Coefficients array: ", coefficients_array)
     print("Optimal parameters: ", optimal_parameters)
     # print("All results: ", all_results)
+
+    #make array of x true history and x est history
+    # x_true_history = np.array(x_true_history)
+    # x_est_history = np.array(x_est_history)
 
     # # Save the coefficients array and optimal parameters
     # coefficients_array = np.array(coefficients_array)
@@ -412,6 +492,23 @@ def main():
     # plt.legend()
     # plt.grid()
     # plt.show()
+
+    position_errors = np.array(position_errors)
+
+    #plot the distance from the origin the robot is at each time step
+    plt.figure()
+    plt.plot(position_errors, 'r-', label='Position Error')
+    # plot the final poisition error
+    plt.plot(position_errors[-1], label='Final Distance from Goal = {:.2f}cm'.format(position_errors[-1]))
+    plt.plot(bearing_errors[-1], label='Final Bearing Error from Goal = {:.2f}rad'.format(bearing_errors[-1]))
+    plt.xlabel('Time Step')
+    plt.ylabel('Position Error')
+    plt.title('Position Error')
+    plt.legend()
+    plt.grid()
+    plt.show()
+
+
 
 
     # Plotting 
@@ -435,6 +532,27 @@ def main():
     plt.title('Robot Bearing')
     plt.legend()
     plt.grid()
+    plt.show()
+
+    # Plot Trajectories
+    plt.figure()
+    plt.plot(x_true_history[:, 0], x_true_history[:, 1], label="True Path")
+    plt.plot(x_est_history[:, 0], x_est_history[:, 1], linestyle='--', label="EKF Estimated Path")
+    plt.scatter(landmarks[:, 0], landmarks[:, 1], color='red', marker='x', label="Landmarks")
+    plt.xlabel("X Position [m]")
+    plt.ylabel("Y Position [m]")
+    plt.legend()
+    plt.grid()
+
+    for i, label in enumerate(['X', 'Y', 'Theta']):
+        plt.figure()
+        plt.plot(x_true_history[:, i], label=f"True {label}")
+        plt.plot(x_est_history[:, i], linestyle='--', label=f"Estimated {label}")
+        plt.xlabel("Time step")
+        plt.ylabel(label)
+        plt.legend()
+        plt.grid()
+
     plt.show()
 
 

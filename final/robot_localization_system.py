@@ -19,31 +19,31 @@ class FilterConfiguration(object):
 #setting the land marks for the map
 class Map(object):
     def __init__(self):
-        # # Define the radii and number of landmarks for each ring
-        # ring_radii = [42,32, 24, 16, 8]  # Add more radii as needed for more rings
-        # num_landmarks_per_ring = [25 ,22, 18, 10, 5]  # Number of landmarks for each ring
+        # Define the radii and number of landmarks for each ring
+        ring_radii = [5, 2]  # Add more radii as needed for more rings
+        num_landmarks_per_ring = [12, 8]  # Number of landmarks for each ring
 
-        # # Initialize list to hold all landmark coordinates
-        # landmarks = []
+        # Initialize list to hold all landmark coordinates
+        landmarks = []
 
-        # # Generate landmarks for each ring
-        # for radius, num_landmarks in zip(ring_radii, num_landmarks_per_ring):
-        #     # Create angles evenly spaced around the circle for the current ring
-        #     angles = np.linspace(0, 2 * np.pi, num_landmarks, endpoint=False)
+        # Generate landmarks for each ring
+        for radius, num_landmarks in zip(ring_radii, num_landmarks_per_ring):
+            # Create angles evenly spaced around the circle for the current ring
+            angles = np.linspace(0, 2 * np.pi, num_landmarks, endpoint=False)
             
-        #     # Generate (x, y) coordinates for each landmark on the ring
-        #     ring_landmarks = [
-        #         [radius * np.cos(angle), radius * np.sin(angle)] for angle in angles
-        #     ]
+            # Generate (x, y) coordinates for each landmark on the ring
+            ring_landmarks = [
+                [radius * np.cos(angle), radius * np.sin(angle)] for angle in angles
+            ]
             
-        #     # Add current ring's landmarks to the full list
-        #     landmarks.extend(ring_landmarks)
+            # Add current ring's landmarks to the full list
+            landmarks.extend(ring_landmarks)
 
-        # # Optionally add a central landmark at [0,0]
-        # landmarks.append([0, 0])
+        # Optionally add a central landmark at [0,0]
+        landmarks.append([0, 0])
 
         # Convert the landmarks list to a NumPy array for consistency
-        # self.landmarks = np.array(landmarks)
+        self.landmarks = np.array(landmarks)
 
 
         #####################circle pattern################
@@ -77,13 +77,13 @@ class Map(object):
         # Generate a grid of landmark coordinates from -30 to 30 with a step of 5
         # Define denser range for border points (more frequent points along the edges)
         
-        # Define the range and step size for the border (points along the edges only)
-        # x_border = np.concatenate((np.arange(-40, 41, 8), np.array([-40, 40])))  # x coordinates at edges and corners
-        # y_border = np.concatenate((np.arange(-40, 41, 8), np.array([-40, 40])))
+        # # Define the range and step size for the border (points along the edges only)
+        # x_border = np.concatenate((np.arange(-40, 41, 20), np.array([-40, 40])))  # x coordinates at edges and corners
+        # y_border = np.concatenate((np.arange(-40, 41, 20), np.array([-40, 40])))
 
         # # Define the inner grid with a smaller range
-        # x_inner = np.arange(-40, 41, 8)  # Inner grid range
-        # y_inner = np.arange(-40, 41, 8)
+        # x_inner = np.arange(-10, 11, 20)  # Inner grid range
+        # y_inner = np.arange(-10, 11, 20)
 
         # # Create border points using only edge points of the defined border range
         # xx_border = np.concatenate([np.full(len(y_border), -40), np.full(len(y_border), 40), x_border, x_border])
@@ -98,22 +98,25 @@ class Map(object):
 
         # # Combine border and inner grid points
         # landmarks = np.vstack((landmarks_border, landmarks_inner))
+        # landmarks = np.unique(landmarks, axis=0)
+
+
 
         # # Set the landmarks as an attribute
         # self.landmarks = landmarks
         ##########################################
 
         ################Grid Pattern################
-        # Define the range for x and y coordinates
-        x_values = range(-20, 35, 5)  # from -20 to 30 in steps of 5
-        y_values = range(-10, 35, 5)  # from -10 to 30 in steps of 5
+        # # Define the range for x and y coordinates
+        # x_values = range(-40, 41, 20)  
+        # y_values = range(-40, 41, 20)  
 
-        # Create a list to store the grid coordinates
-        grid_pattern = [[x, y] for x in x_values for y in y_values]
+        # # Create a list to store the grid coordinates
+        # grid_pattern = [[x, y] for x in x_values for y in y_values]
         
-        self.landmarks = np.array(grid_pattern)
+        # self.landmarks = np.array(grid_pattern)
         #########################################
-        
+
         # self.landmarks = np.array([
         #     [5, 10],
         #     [15, 5],
