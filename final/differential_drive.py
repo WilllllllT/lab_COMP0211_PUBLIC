@@ -433,6 +433,8 @@ def main():
         print("base_bearing_",base_bearing_)
         print("angular_wheels_velocity_cmd",angular_wheels_velocity_cmd)
 
+        ## Check if the goal is reached ##
+
         # position_good = True if np.abs(base_pos[0]) < pos_cutoff and np.abs(base_pos[1]) < pos_cutoff else False
         # bearing_good = True if np.abs(base_bearing_) < bearing_cutoff or np.abs((3.14 - np.abs(base_bearing_)) < bearing_cutoff) else False
         # angular_velocity_good = True if np.average(np.abs(angular_wheels_velocity_cmd)) < angular_cutoff else False
@@ -498,17 +500,17 @@ def main():
     position_errors = np.array(position_errors)
 
     #plot the distance from the origin the robot is at each time step
-    plt.figure()
-    plt.plot(position_errors, 'r-', label='Position Error')
-    # plot the final poisition error
-    plt.plot(position_errors[-1], label='Final Distance from Goal = {:.2f}cm'.format(position_errors[-1]))
-    plt.plot(bearing_errors[-1], label='Final Bearing Error from Goal = {:.2f}rad'.format(bearing_errors[-1]))
-    plt.xlabel('Time Step')
-    plt.ylabel('Position Error')
-    plt.title('Position Error')
-    plt.legend()
-    plt.grid()
-    plt.show()
+    # plt.figure()
+    # plt.plot(position_errors, 'r-', label='Position Error')
+    # # plot the final poisition error
+    # plt.plot(position_errors[-1], label='Final Distance from Goal = {:.2f}cm'.format(position_errors[-1]))
+    # plt.plot(bearing_errors[-1], label='Final Bearing Error from Goal = {:.2f}rad'.format(bearing_errors[-1]))
+    # plt.xlabel('Time Step')
+    # plt.ylabel('Position Error')
+    # plt.title('Position Error')
+    # plt.legend()
+    # plt.grid()
+    # plt.show()
 
 
 
@@ -517,45 +519,45 @@ def main():
     #add visualization of final x, y, trajectory and theta
     base_pos_all = np.array(base_pos_all)
     base_bearing_all = np.array(base_bearing_all)
-    plt.figure()
-    plt.plot(base_pos_all[:, 0], base_pos_all[:, 1], 'b-', label='Robot Trajectory')
-    plt.xlabel('x [m]')
-    plt.ylabel('y [m]')
-    plt.title('Robot Trajectory')
-    plt.legend()
-    plt.grid()
-    plt.show()
+    # plt.figure()
+    # plt.plot(base_pos_all[:, 0], base_pos_all[:, 1], 'b-', label='Robot Trajectory')
+    # plt.xlabel('x [m]')
+    # plt.ylabel('y [m]')
+    # plt.title('Robot Trajectory')
+    # plt.legend()
+    # plt.grid()
+    # plt.show()
 
 
-    plt.figure()
-    plt.plot(np.arctan2(np.sin(base_bearing_all), np.cos(base_bearing_all)), 'r-', label='Robot Bearing')
-    plt.xlabel('Time Step')
-    plt.ylabel('Bearing [rad]')
-    plt.title('Robot Bearing')
-    plt.legend()
-    plt.grid()
-    plt.show()
+    # plt.figure()
+    # plt.plot(np.arctan2(np.sin(base_bearing_all), np.cos(base_bearing_all)), 'r-', label='Robot Bearing')
+    # plt.xlabel('Time Step')
+    # plt.ylabel('Bearing [rad]')
+    # plt.title('Robot Bearing')
+    # plt.legend()
+    # plt.grid()
+    # plt.show()
 
     # Plot Trajectories
-    plt.figure()
-    plt.plot(x_true_history[:, 0], x_true_history[:, 1], label="True Path")
-    plt.plot(x_est_history[:, 0], x_est_history[:, 1], linestyle='--', label="EKF Estimated Path")
-    plt.scatter(landmarks[:, 0], landmarks[:, 1], color='red', marker='x', label="Landmarks")
-    plt.xlabel("X Position [m]")
-    plt.ylabel("Y Position [m]")
-    plt.legend()
-    plt.grid()
+    # plt.figure()
+    # plt.plot(x_true_history[:, 0], x_true_history[:, 1], label="True Path")
+    # plt.plot(x_est_history[:, 0], x_est_history[:, 1], linestyle='--', label="EKF Estimated Path")
+    # plt.scatter(landmarks[:, 0], landmarks[:, 1], color='red', marker='x', label="Landmarks")
+    # plt.xlabel("X Position [m]")
+    # plt.ylabel("Y Position [m]")
+    # plt.legend()
+    # plt.grid()
 
-    for i, label in enumerate(['X', 'Y', 'Theta']):
-        plt.figure()
-        plt.plot(x_true_history[:, i], label=f"True {label}")
-        plt.plot(x_est_history[:, i], linestyle='--', label=f"Estimated {label}")
-        plt.xlabel("Time step")
-        plt.ylabel(label)
-        plt.legend()
-        plt.grid()
+    # for i, label in enumerate(['X', 'Y', 'Theta']):
+    #     plt.figure()
+    #     plt.plot(x_true_history[:, i], label=f"True {label}")
+    #     plt.plot(x_est_history[:, i], linestyle='--', label=f"Estimated {label}")
+    #     plt.xlabel("Time step")
+    #     plt.ylabel(label)
+    #     plt.legend()
+    #     plt.grid()
 
-    plt.show()
+    # plt.show()
 
 
 
